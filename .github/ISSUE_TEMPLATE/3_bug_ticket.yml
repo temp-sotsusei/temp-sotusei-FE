@@ -1,0 +1,19 @@
+name: Bug Ticket
+description: バグに関するIssueはこちら
+labels: ["bug"]
+body:
+  - type: textarea
+    id: overview
+    attributes:
+      label: 概要
+      placeholder: このチケットで行うバグ修正の概要を記述する
+  - type: textarea
+    id: detail
+    attributes:
+      label: 詳細な情報
+      placeholder: バグ修正に関する詳しい記述を行う
+  - type: textarea
+    id: reference
+    attributes:
+      label: 参考文献
+      placeholder: バグ修正に必要な参考文献を記述する

@@ -1,0 +1,14 @@
+name: Refactoring Ticket
+description: リファクタリングに関するIssueはこちら
+labels: ["refactoring"]
+body:
+  - type: textarea
+    id: overview
+    attributes:
+      label: 概要
+      placeholder: このチケットで行うリファクタリングの概要を記述する
+  - type: textarea
+    id: detail
+    attributes:
+      label: 詳細な情報
+      placeholder: リファクタリングに関する詳しい記述を行う

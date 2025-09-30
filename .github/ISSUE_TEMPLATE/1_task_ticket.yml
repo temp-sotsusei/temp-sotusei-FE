@@ -1,0 +1,24 @@
+name: Task Ticket
+description: タスクに関するIssueはこちら
+labels: ["task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: ゴール
+      placeholder: このチケットで達成したいタスクの概要を記述する
+  - type: textarea
+    id: detail
+    attributes:
+      label: 詳細な実装
+      placeholder: 達成したいタスクに関する細かい仕様を記述する
+  - type: textarea
+    id: reference
+    attributes:
+      label: 参考
+      placeholder: タスクの実装に必要なライブラリ等の参考文献を記述する
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 前提タスクなど
+      placeholder: このタスクに着手する前に終わらないといけないタスクを記述する
