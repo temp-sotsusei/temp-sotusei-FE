@@ -9,11 +9,13 @@
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.10.0",
+    "@hookform/error-message": "^2.0.1",
     "lucide-react": "^0.544.0",
     "next": "15.5.4",
     "react": "19.1.0",
     "react-calendar": "^6.0.0",
     "react-dom": "19.1.0",
+    "react-hook-form": "^7.64.0",
     "swiper": "^12.0.2"
   },
   "devDependencies": {

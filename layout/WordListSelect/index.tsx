@@ -1,14 +1,17 @@
 "use client";
 
-import { FC, useCallback, useState } from "react";
-import { APP_TITLE } from "@/constants";
+import { FC, TouchEvent, useCallback, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-
-import "swiper/css";
+import type { Swiper as SwiperType } from "swiper";
+import { SubmitHandler, useForm } from "react-hook-form";
 import WordList from "@/components/WordList";
 import SlidePrevButton from "@/components/SlidePrevButton";
 import SlideNextButton from "@/components/SlideNextButton";
-import type { Swiper as SwiperType } from "swiper";
+import { MESSAGE_FORM_VALUES } from "@/constants";
+import { MessageForm } from "@/types/form";
+
+import "swiper/css";
+import { ErrorMessage } from "@hookform/error-message";
 
 type Props = {
   nestedWordList: string[][];
@@ -22,39 +25,90 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const handleSlideChange = useCallback((swiper: SwiperType) => {
     setDisplayedWordList(nestedWordList[swiper.realIndex]);
   }, []);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<MessageForm>({
+    defaultValues: {
+      [MESSAGE_FORM_VALUES.MESSAGE]: "",
+    },
+  });
+  const onSubmit = useCallback<SubmitHandler<MessageForm>>(
+    (data) => console.log(data),
+    []
+  );
+
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const startDrag = useCallback((e: TouchEvent<HTMLParagraphElement>) => {
+    setIsDragging(true);
+    console.log(e);
+  }, []);
+
   return (
     <>
-      <div className="fixed left-1/2 -translate-x-1/2 top-8 border font-bold px-8 py-4">
-        {APP_TITLE}
-      </div>
       {isSelectedWordList ? (
-        <div className="h-screen">
-          <div className="h-[calc(66.67%-120px)] mx-4 mb-4 mt-26 border">
+        <form className="h-screen" onSubmit={handleSubmit(onSubmit)}>
+          <div className="h-[calc(66.66%-16px)] mx-4 mb-4 border">
             <div className="border flex items-center justify-center py-2 m-4">
               第1章
             </div>
-            <div className="mx-8">第1章の単語</div>
+            <div className="mx-8">
+              <p>第1章の単語</p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {displayedWordList.map((word, index) => (
+                  <p
+                    className="border border-gray-400 rounded-2xl px-4 py-2"
+                    key={index}
+                    // ref={}
+                    onTouchStart={startDrag}
+                  >
+                    {word}
+                  </p>
+                ))}
+              </div>
+              <textarea
+                rows={9}
+                placeholder="第1章の物語入力"
+                className="mt-4 w-full border rounded p-4"
+                {...register(MESSAGE_FORM_VALUES.MESSAGE, {
+                  maxLength: {
+                    value: 150,
+                    message: "150文字以内で入力してください",
+                  },
+                })}
+              />
+              <ErrorMessage
+                errors={errors}
+                name={MESSAGE_FORM_VALUES.MESSAGE}
+                render={({ message }) => (
+                  <p className="text-red-500">{message}</p>
+                )}
+              />
+            </div>
           </div>
           <div className="h-1/3 border-t">
-            <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
-              {displayedWordList.map((word) => (
-                <div className="border px-4 py-2 rounded-2xl">{word}</div>
+            <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.66%-32px)]">
+              {displayedWordList.map((word, index) => (
+                <div className="border px-4 py-2 rounded-2xl" key={index}>
+                  {word}
+                </div>
               ))}
             </div>
             <div className="flex items-center justify-between mx-4 h-1/3">
               <div className="flex-1" />
               <div className="px-16 py-4 border">完成</div>
               <div className="flex-1 flex justify-end">
-                <div className="text-center border p-2">
+                <button type="submit" className="text-center border p-2">
                   <p className="text-sm">次の章を作成</p>
                   <p className="text-sm">0/4</p>
-                </div>
+                </button>
               </div>
             </div>
           </div>
-        </div>
+        </form>
       ) : (
-        <div className="fixed bottom-0 border-t w-full h-160">
+        <div className="fixed bottom-0 border-t w-full h-2/3">
           <Swiper
             spaceBetween={0}
             loop={true}

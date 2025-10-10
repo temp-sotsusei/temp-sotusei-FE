@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>文字列タッチ位置判定（モバイル対応）</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        touch-action: none;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .draggable {
+        display: inline-block;
+        padding: 15px 30px;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border-radius: 12px;
+        cursor: move;
+        font-weight: bold;
+        color: white;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+        user-select: none;
+        touch-action: none;
+        transition: transform 0.2s;
+      }
+
+      .draggable.dragging {
+        opacity: 0.7;
+        transform: scale(1.1);
+        position: fixed;
+        z-index: 1000;
+        pointer-events: none;
+      }
+
+      .text-area {
+        background: white;
+        padding: 30px;
+        border-radius: 16px;
+        margin-top: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        min-height: 200px;
+      }
+
+      .text-content {
+        font-size: 18px;
+        line-height: 1.8;
+        color: #333;
+        user-select: none;
+      }
+
+      .text-area.drag-over {
+        background: rgba(102, 126, 234, 0.15);
+        border: 3px solid #667eea;
+      }
+
+      .info {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .info h2 {
+        margin-top: 0;
+        color: #667eea;
+      }
+
+      .position-info {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: "Courier New", monospace;
+        margin-top: 10px;
+        font-size: 14px;
+      }
+
+      .marker {
+        display: inline-block;
+        width: 2px;
+        height: 1.5em;
+        background: #f5576c;
+        animation: blink 1s infinite;
+        margin: 0 2px;
+      }
+
+      @keyframes blink {
+        0%,
+        50% {
+          opacity: 1;
+        }
+        51%,
+        100% {
+          opacity: 0;
+        }
+      }
+
+      .device-info {
+        background: #fff3cd;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-top: 10px;
+        font-size: 14px;
+        color: #856404;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="info">
+        <h2>📱 文字列タッチ位置判定（モバイル対応）</h2>
+        <p>
+          下のボックスをドラッグ/タッチして、テキストの上でドロップしてください。<br />
+          PC（マウス）でもスマホ（タッチ）でも動作します。
+        </p>
+        <div class="device-info" id="deviceInfo">デバイス情報を取得中...</div>
+        <div class="position-info" id="positionInfo">
+          ドロップすると位置情報が表示されます
+        </div>
+      </div>
+
+      <div class="draggable" id="draggable">
+        🎯 ドラッグ/タッチしてテキストへ
+      </div>
+
+      <div class="text-area" id="textArea">
+        <div class="text-content" id="textContent">
+          吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。吾輩はここで始めて人間というものを見た。しかもあとで聞くとそれは書生という人間中で一番獰悪な種族であったそうだ。この書生というのは時々我々を捕えて煮て食うという話である。
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const draggable = document.getElementById("draggable");
+      const textArea = document.getElementById("textArea");
+      const textContent = document.getElementById("textContent");
+      const positionInfo = document.getElementById("positionInfo");
+      const deviceInfo = document.getElementById("deviceInfo");
+
+      let originalText = textContent.textContent;
+      let isDragging = false;
+      let dragStartX, dragStartY;
+      let originalPosition = null;
+
+      // デバイス情報を表示
+      const isTouchDevice =
+        "ontouchstart" in window || navigator.maxTouchPoints > 0;
+      deviceInfo.textContent = `デバイス: ${
+        isTouchDevice ? "タッチ対応（スマホ/タブレット）" : "マウス操作（PC）"
+      }`;
+
+      // マウスイベント
+      draggable.addEventListener("mousedown", startDrag);
+      document.addEventListener("mousemove", drag);
+      document.addEventListener("mouseup", endDrag);
+
+      // タッチイベント（スマホ対応）
+      draggable.addEventListener("touchstart", startDrag);
+      document.addEventListener("touchmove", drag);
+      document.addEventListener("touchend", endDrag);
+
+      function startDrag(e) {
+        isDragging = true;
+        draggable.classList.add("dragging");
+
+        // 初期位置を保存
+        if (!originalPosition) {
+          const rect = draggable.getBoundingClientRect();
+          originalPosition = {
+            left: rect.left,
+            top: rect.top,
+          };
+        }
+
+        const touch = e.touches ? e.touches[0] : e;
+        dragStartX = touch.clientX;
+        dragStartY = touch.clientY;
+
+        e.preventDefault();
+      }
+
+      function drag(e) {
+        if (!isDragging) return;
+
+        const touch = e.touches ? e.touches[0] : e;
+        const x = touch.clientX;
+        const y = touch.clientY;
+
+        // ドラッグ中の要素を移動
+        draggable.style.left = x - 50 + "px";
+        draggable.style.top = y - 20 + "px";
+
+        // テキストエリアの上にあるかチェック
+        const rect = textArea.getBoundingClientRect();
+        if (
+          x >= rect.left &&
+          x <= rect.right &&
+          y >= rect.top &&
+          y <= rect.bottom
+        ) {
+          textArea.classList.add("drag-over");
+        } else {
+          textArea.classList.remove("drag-over");
+        }
+
+        e.preventDefault();
+      }
+
+      function endDrag(e) {
+        if (!isDragging) return;
+
+        isDragging = false;
+        draggable.classList.remove("dragging");
+        textArea.classList.remove("drag-over");
+
+        // 位置をリセット
+        draggable.style.left = "";
+        draggable.style.top = "";
+
+        const touch = e.changedTouches ? e.changedTouches[0] : e;
+        const x = touch.clientX;
+        const y = touch.clientY;
+
+        // テキストエリアの上でドロップしたかチェック
+        const rect = textArea.getBoundingClientRect();
+        if (
+          x >= rect.left &&
+          x <= rect.right &&
+          y >= rect.top &&
+          y <= rect.bottom
+        ) {
+          detectTextPosition(x, y);
+        }
+
+        e.preventDefault();
+      }
+
+      function detectTextPosition(x, y) {
+        let caretPosition = null;
+        let offset = 0;
+        let targetNode = null;
+
+        // Chrome/Safari用
+        if (document.caretRangeFromPoint) {
+          const range = document.caretRangeFromPoint(x, y);
+          if (range) {
+            caretPosition = range;
+            offset = range.startOffset;
+            targetNode = range.startContainer;
+          }
+        }
+        // Firefox用
+        else if (document.caretPositionFromPoint) {
+          const position = document.caretPositionFromPoint(x, y);
+          if (position) {
+            offset = position.offset;
+            targetNode = position.offsetNode;
+          }
+        }
+
+        if (targetNode && targetNode.nodeType === Node.TEXT_NODE) {
+          const text = targetNode.textContent;
+          const charBefore = text[offset - 1] || "";
+          const charAt = text[offset] || "";
+          const charAfter = text[offset + 1] || "";
+
+          // テキスト全体での位置を計算
+          const fullText = textContent.textContent;
+          let globalOffset = 0;
+
+          const walker = document.createTreeWalker(
+            textContent,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+          );
+
+          let currentNode;
+          while ((currentNode = walker.nextNode())) {
+            if (currentNode === targetNode) {
+              globalOffset += offset;
+              break;
+            }
+            globalOffset += currentNode.textContent.length;
+          }
+
+          // 情報を表示
+          positionInfo.innerHTML = `
+                    <strong>✅ ドロップ成功！</strong><br>
+                    文字位置: ${globalOffset} 文字目<br>
+                    前の文字: "${charBefore}"<br>
+                    現在の位置: "${charAt}"<br>
+                    次の文字: "${charAfter}"<br>
+                    <br>
+                    周辺テキスト: "${text.substring(
+                      Math.max(0, offset - 5),
+                      offset
+                    )}<strong>|</strong>${text.substring(offset, offset + 5)}"
+                `;
+
+          // テキストにマーカーを挿入して視覚化
+          const beforeText = fullText.substring(0, globalOffset);
+          const afterText = fullText.substring(globalOffset);
+
+          textContent.innerHTML =
+            escapeHtml(beforeText) +
+            '<span class="marker"></span>' +
+            escapeHtml(afterText);
+
+          // 3秒後に元に戻す
+          setTimeout(() => {
+            textContent.textContent = originalText;
+          }, 3000);
+        } else {
+          positionInfo.innerHTML = `
+                    <strong>テキスト以外の場所にドロップされました</strong>
+                `;
+        }
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    </script>
+  </body>
+</html>
