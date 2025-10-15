@@ -10,6 +10,10 @@ import SlideNextButton from "@/components/SlideNextButton";
 import type { Swiper as SwiperType } from "swiper";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Draggable from "@/components/Draggable";
+import { DndContext, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import Dropabble from "@/components/Droppable";
+import { text } from "stream/consumers";
 
 type Props = {
   nestedWordList: string[][];
@@ -43,50 +47,55 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     setIsTextEditorActive(true);
     editor.commands.focus();
   }, [editor]);
+  const sensors = useSensors(useSensor(TouchSensor));
+
   return (
     <>
       {isSelectedWordList ? (
-        <div className="h-screen">
-          <div className="h-[calc(66.67%-16px)] mx-4 mb-4 border">
-            <div className="border flex items-center justify-center py-2 m-4">
-              第1章
-            </div>
-            <div className="mx-8">第1章の単語</div>
-            <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
-              {displayedWordList.map((word, index) => (
-                <div className="border px-4 py-2 rounded-2xl" key={index}>
-                  {word}
-                </div>
-              ))}
-            </div>
-            {isTextEditorActive ? (
-              <EditorContent editor={editor} className="border mx-8" />
-            ) : (
-              <div className="border mx-8" onClick={activateTextEditor}>
-                {textValue}
+        <DndContext sensors={sensors}>
+          <div className="h-screen">
+            <div className="h-[calc(66.67%-16px)] mx-4 mb-4 border">
+              <div className="border flex items-center justify-center py-2 m-4">
+                第1章
               </div>
-            )}
-          </div>
-          <div className="h-1/3 border-t flex flex-col items-between">
-            <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
-              {displayedWordList.map((word, index) => (
-                <div className="border px-4 py-2 rounded-2xl" key={index}>
-                  {word}
+              <div className="mx-8">第1章の単語</div>
+              <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
+                {displayedWordList.map((word, index) => (
+                  <div className="border px-4 py-2 rounded-2xl" key={index}>
+                    {word}
+                  </div>
+                ))}
+              </div>
+              {isTextEditorActive ? (
+                <EditorContent editor={editor} className="border mx-8" />
+              ) : (
+                <div className="border mx-8" onClick={activateTextEditor}>
+                  {}
+                  <Dropabble>{textValue}</Dropabble>
                 </div>
-              ))}
+              )}
             </div>
-            <div className="flex items-center justify-between mx-4 h-1/3">
-              <div className="flex-1" />
-              <div className="px-16 py-4 border">完成</div>
-              <div className="flex-1 flex justify-end">
-                <div className="text-center border p-2">
-                  <p className="text-sm">次の章を作成</p>
-                  <p className="text-sm">0/4</p>
+            <div className="h-1/3 border-t flex flex-col items-between">
+              <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
+                {displayedWordList.map((word, index) => (
+                  <Draggable key={index} id={index}>
+                    <div className="border px-4 py-2 rounded-2xl">{word}</div>
+                  </Draggable>
+                ))}
+              </div>
+              <div className="flex items-center justify-between mx-4 h-1/3">
+                <div className="flex-1" />
+                <div className="px-16 py-4 border">完成</div>
+                <div className="flex-1 flex justify-end">
+                  <div className="text-center border p-2">
+                    <p className="text-sm">次の章を作成</p>
+                    <p className="text-sm">0/4</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </DndContext>
       ) : (
         <div className="fixed bottom-0 border-t w-full h-2/3">
           <Swiper
