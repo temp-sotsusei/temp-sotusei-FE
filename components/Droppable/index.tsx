@@ -3,19 +3,23 @@ import { FC } from "react";
 
 type Props = {
   children: React.ReactNode;
+  id: number;
 };
-const Dropabble: FC<Props> = ({ children }) => {
+const Droppable: FC<Props> = ({ children, id }) => {
   const { isOver, setNodeRef } = useDroppable({
-    id: "droppable",
+    id: `droppable-${id}`,
+    data: {
+      position: id,
+    },
   });
   const style = {
     color: isOver ? "green" : undefined,
   };
   return (
-    <div ref={setNodeRef} style={style}>
+    <span ref={setNodeRef} style={style}>
       {children}
-    </div>
+    </span>
   );
 };
 
-export default Dropabble;
+export default Droppable;

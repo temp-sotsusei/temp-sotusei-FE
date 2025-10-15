@@ -11,9 +11,14 @@ import type { Swiper as SwiperType } from "swiper";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Draggable from "@/components/Draggable";
-import { DndContext, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
-import Dropabble from "@/components/Droppable";
-import { text } from "stream/consumers";
+import {
+  DndContext,
+  DragEndEvent,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import Droppable from "@/components/Droppable";
 
 type Props = {
   nestedWordList: string[][];
@@ -37,8 +42,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     extensions: [StarterKit],
     content: textValue,
     immediatelyRender: false,
-    onBlur: ({ editor, event }) => {
-      console.log(editor.getText());
+    onBlur: ({ editor }) => {
       setTextValue(editor.getText());
       deactivateTextEditor();
     },
@@ -48,11 +52,14 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     editor.commands.focus();
   }, [editor]);
   const sensors = useSensors(useSensor(TouchSensor));
-
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { over } = event;
+    console.log("文字列番目:", over.data.current.position);
+  }, []);
   return (
     <>
       {isSelectedWordList ? (
-        <DndContext sensors={sensors}>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="h-screen">
             <div className="h-[calc(66.67%-16px)] mx-4 mb-4 border">
               <div className="border flex items-center justify-center py-2 m-4">
@@ -69,9 +76,16 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
               {isTextEditorActive ? (
                 <EditorContent editor={editor} className="border mx-8" />
               ) : (
-                <div className="border mx-8" onClick={activateTextEditor}>
-                  {}
-                  <Dropabble>{textValue}</Dropabble>
+                <div
+                  className="border mx-8 break-all"
+                  onClick={activateTextEditor}
+                >
+                  {/* // TODO:ガチでメモ化したい.不快 */}
+                  {textValue.split("").map((char, index) => (
+                    <Droppable key={index} id={index}>
+                      {char}
+                    </Droppable>
+                  ))}
                 </div>
               )}
             </div>
