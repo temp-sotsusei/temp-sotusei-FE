@@ -1,7 +1,6 @@
 "use client";
 
 import { FC, useCallback, useState } from "react";
-import { APP_TITLE } from "@/constants";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 import "swiper/css";
@@ -9,10 +8,13 @@ import WordList from "@/components/WordList";
 import SlidePrevButton from "@/components/SlidePrevButton";
 import SlideNextButton from "@/components/SlideNextButton";
 import type { Swiper as SwiperType } from "swiper";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 
 type Props = {
   nestedWordList: string[][];
 };
+
 const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const [isSelectedWordList, setIsSelectedWordList] = useState<boolean>(false);
   const handleSelectWordList = useCallback(() => {
@@ -22,23 +24,54 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const handleSlideChange = useCallback((swiper: SwiperType) => {
     setDisplayedWordList(nestedWordList[swiper.realIndex]);
   }, []);
+  const [isTextEditorActive, setIsTextEditorActive] = useState(false);
+  const deactivateTextEditor = useCallback(() => {
+    setIsTextEditorActive(false);
+  }, []);
+  const [textValue, setTextValue] = useState<string>("tiptap入力値");
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: textValue,
+    immediatelyRender: false,
+    onBlur: ({ editor, event }) => {
+      console.log(editor.getText());
+      setTextValue(editor.getText());
+    },
+  });
+  const activateTextEditor = useCallback(() => {
+    setIsTextEditorActive(true);
+    editor.commands.focus();
+  }, [editor]);
   return (
     <>
-      <div className="fixed left-1/2 -translate-x-1/2 top-8 border font-bold px-8 py-4">
-        {APP_TITLE}
-      </div>
       {isSelectedWordList ? (
         <div className="h-screen">
-          <div className="h-[calc(66.67%-120px)] mx-4 mb-4 mt-26 border">
+          <div className="h-[calc(66.67%-16px)] mx-4 mb-4 border">
             <div className="border flex items-center justify-center py-2 m-4">
               第1章
             </div>
             <div className="mx-8">第1章の単語</div>
+            <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
+              {displayedWordList.map((word, index) => (
+                <div className="border px-4 py-2 rounded-2xl" key={index}>
+                  {word}
+                </div>
+              ))}
+            </div>
+            {isTextEditorActive ? (
+              <EditorContent editor={editor} className="border mx-8" />
+            ) : (
+              <div className="border mx-8" onClick={activateTextEditor}>
+                {textValue}
+              </div>
+            )}
           </div>
-          <div className="h-1/3 border-t">
+          <div className="h-1/3 border-t flex flex-col items-between">
             <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
-              {displayedWordList.map((word) => (
-                <div className="border px-4 py-2 rounded-2xl">{word}</div>
+              {displayedWordList.map((word, index) => (
+                <div className="border px-4 py-2 rounded-2xl" key={index}>
+                  {word}
+                </div>
               ))}
             </div>
             <div className="flex items-center justify-between mx-4 h-1/3">
@@ -54,7 +87,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           </div>
         </div>
       ) : (
-        <div className="fixed bottom-0 border-t w-full h-160">
+        <div className="fixed bottom-0 border-t w-full h-2/3">
           <Swiper
             spaceBetween={0}
             loop={true}
