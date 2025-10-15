@@ -36,6 +36,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     onBlur: ({ editor, event }) => {
       console.log(editor.getText());
       setTextValue(editor.getText());
+      deactivateTextEditor();
     },
   });
   const activateTextEditor = useCallback(() => {
