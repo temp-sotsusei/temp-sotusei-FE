@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useCallback, useState } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 import "swiper/css";
@@ -15,15 +15,20 @@ import {
   DndContext,
   DragEndEvent,
   TouchSensor,
+  UniqueIdentifier,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import Droppable from "@/components/Droppable";
 
+type DroppedStrState = {
+  id: UniqueIdentifier;
+  droppedString: string;
+  droppedIndex: number;
+};
 type Props = {
   nestedWordList: string[][];
 };
-
 const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const [isSelectedWordList, setIsSelectedWordList] = useState<boolean>(false);
   const handleSelectWordList = useCallback(() => {
@@ -37,7 +42,10 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const deactivateTextEditor = useCallback(() => {
     setIsTextEditorActive(false);
   }, []);
-  const [textValue, setTextValue] = useState<string>("tiptap入力値");
+  const [textValue, setTextValue] = useState<string>(
+    "あああああああああああああああああああああああああああああああああああああああああああああああ"
+  );
+  const [droppedStrState, setDroppedStrState] = useState<DroppedStrState[]>([]);
   const editor = useEditor({
     extensions: [StarterKit],
     content: textValue,
@@ -52,10 +60,33 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     editor.commands.focus();
   }, [editor]);
   const sensors = useSensors(useSensor(TouchSensor));
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { over } = event;
-    console.log("文字列番目:", over.data.current.position);
-  }, []);
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { over, active } = event;
+      if (over) {
+        console.log("文字列番目:", over.data.current.position);
+        console.log(
+          "ドロップされた要素の文字:",
+          active.data.current.draggedText
+        );
+        console.log("ドロップされた要素番目:", active.id);
+        setDroppedStrState((prev) => {
+          const filteredState = prev.filter((item) => item.id !== active.id);
+          return [
+            ...filteredState,
+            {
+              id: active.id,
+              droppedString: active.data.current.draggedText,
+              droppedIndex: over.data.current.position,
+            },
+          ];
+        });
+      } else {
+        console.log("drop範囲は入力文字内である必要があります");
+      }
+    },
+    [droppedStrState]
+  );
   return (
     <>
       {isSelectedWordList ? (
@@ -92,7 +123,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             <div className="h-1/3 border-t flex flex-col items-between">
               <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
                 {displayedWordList.map((word, index) => (
-                  <Draggable key={index} id={index}>
+                  <Draggable key={index} id={index} draggedText={word}>
                     <div className="border px-4 py-2 rounded-2xl">{word}</div>
                   </Draggable>
                 ))}
