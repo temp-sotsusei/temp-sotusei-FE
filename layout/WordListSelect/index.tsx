@@ -22,7 +22,6 @@ import {
 import Droppable from "@/components/Droppable";
 import { postChapter } from "@/apiClient";
 import CustomWord from "@/components/CustomWord";
-import HtmlParser from "@/components/HtmlParser";
 
 type DroppedStrState = {
   id: UniqueIdentifier;
@@ -42,9 +41,15 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const handleSelectWordList = useCallback(() => {
     setIsSelectedWordList((prev) => !prev);
   }, []);
-  const [displayedWordList, setDisplayedWordList] = useState<string[]>();
+  const [candidateWordList, setCandidateWordList] =
+    useState<string[][]>(nestedWordList);
+  const handleCandidateWordList = useCallback((wordList: string[][]) => {
+    console.log(wordList);
+    setCandidateWordList(wordList);
+  }, []);
+  const [selectedWordList, setSelectedWordList] = useState<string[]>();
   const handleSlideChange = useCallback((swiper: SwiperType) => {
-    setDisplayedWordList(nestedWordList[swiper.realIndex]);
+    setSelectedWordList(candidateWordList[swiper.realIndex]);
   }, []);
   const [isTextEditorActive, setIsTextEditorActive] = useState(false);
   const deactivateTextEditor = useCallback(() => {
@@ -105,12 +110,12 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   );
   const isComplete = droppedStrState.length === 4;
   const postChapterRequest = useCallback(async (chapterText: string) => {
-    await postChapter(chapterText);
-    setIsSelectedWordList(false);
+    const response = await postChapter(chapterText);
+    handleSelectWordList();
+    handleCandidateWordList(response);
   }, []);
   const getTiptapHTML = useCallback(() => {
     const editorContent = editor.getJSON();
-    // HACK: 型誤魔化してる
     const contents = editorContent.content[0].content;
 
     const result: CharItem[] = [];
@@ -147,7 +152,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
               </div>
               <div className="mx-8">第1章の単語</div>
               <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
-                {displayedWordList.map((word, index) => (
+                {selectedWordList.map((word, index) => (
                   <div className="border px-4 py-2 rounded-2xl" key={index}>
                     {word}
                   </div>
@@ -176,7 +181,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             </div>
             <div className="h-1/3 border-t flex flex-col items-between">
               <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
-                {displayedWordList.map((word, index) => (
+                {selectedWordList.map((word, index) => (
                   <Draggable
                     key={index}
                     id={index}
@@ -226,7 +231,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             loop={true}
             onSlideChange={handleSlideChange}
           >
-            {nestedWordList.map((wordList, index) => (
+            {candidateWordList.map((wordList, index) => (
               <SwiperSlide key={index}>
                 <WordList wordList={wordList} />
               </SwiperSlide>
