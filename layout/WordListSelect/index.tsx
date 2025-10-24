@@ -8,18 +8,30 @@ import WordList from "@/components/WordList";
 import SlidePrevButton from "@/components/SlidePrevButton";
 import SlideNextButton from "@/components/SlideNextButton";
 import type { Swiper as SwiperType } from "swiper";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { EditorContent, NodeType, TextType, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Draggable from "@/components/Draggable";
 import {
   DndContext,
   DragEndEvent,
   TouchSensor,
+  UniqueIdentifier,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import Droppable from "@/components/Droppable";
+import { postChapter } from "@/apiClient";
+import CustomWord from "@/components/CustomWord";
 
+type DroppedStrState = {
+  id: UniqueIdentifier;
+  droppedString: string;
+  droppedIndex: number;
+};
+type CharItem = {
+  char: string;
+  isDroppable: boolean;
+};
 type Props = {
   nestedWordList: string[][];
 };
@@ -29,21 +41,29 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const handleSelectWordList = useCallback(() => {
     setIsSelectedWordList((prev) => !prev);
   }, []);
-  const [displayedWordList, setDisplayedWordList] = useState<string[]>();
+  const [candidateWordList, setCandidateWordList] =
+    useState<string[][]>(nestedWordList);
+  const handleCandidateWordList = useCallback((wordList: string[][]) => {
+    console.log(wordList);
+    setCandidateWordList(wordList);
+  }, []);
+  const [selectedWordList, setSelectedWordList] = useState<string[]>();
   const handleSlideChange = useCallback((swiper: SwiperType) => {
-    setDisplayedWordList(nestedWordList[swiper.realIndex]);
+    setSelectedWordList(candidateWordList[swiper.realIndex]);
   }, []);
   const [isTextEditorActive, setIsTextEditorActive] = useState(false);
   const deactivateTextEditor = useCallback(() => {
     setIsTextEditorActive(false);
   }, []);
-  const [textValue, setTextValue] = useState<string>("tiptap入力値");
+  const [droppedStrState, setDroppedStrState] = useState<DroppedStrState[]>([]);
   const editor = useEditor({
-    extensions: [StarterKit],
-    content: textValue,
+    extensions: [StarterKit, CustomWord],
+    // content:
+    //   "あああああああああああああああああああああああああああああああああああああああああああああああいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいい",
+    content:
+      "<p>あなたは<span>ぞう</span>ですが、<span>まほうつかい</span>でもありますし、<span>からあげ</span>が好きな<span>あり</span>です。</p>",
     immediatelyRender: false,
-    onBlur: ({ editor }) => {
-      setTextValue(editor.getText());
+    onBlur: () => {
       deactivateTextEditor();
     },
   });
@@ -52,10 +72,75 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     editor.commands.focus();
   }, [editor]);
   const sensors = useSensors(useSensor(TouchSensor));
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { over } = event;
-    console.log("文字列番目:", over.data.current.position);
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { over, active } = event;
+      if (over) {
+        console.log("文字列番目:", over.data.current.position);
+        console.log(
+          "ドロップされた要素の文字:",
+          active.data.current.draggedText
+        );
+        console.log("ドロップされた要素id:", active.id);
+        setDroppedStrState((prev) => {
+          const filteredState = prev.filter((item) => item.id !== active.id);
+          return [
+            ...filteredState,
+            {
+              id: active.id,
+              droppedString: active.data.current.draggedText,
+              droppedIndex: over.data.current.position,
+            },
+          ];
+        });
+
+        editor
+          .chain()
+          .focus()
+          .insertCustomWord(
+            active.data.current.draggedText,
+            over.data.current.position
+          )
+          .run();
+      } else {
+        console.log("drop範囲は入力文字内である必要があります");
+      }
+    },
+    [droppedStrState, editor]
+  );
+  const isComplete = droppedStrState.length === 4;
+  const postChapterRequest = useCallback(async (chapterText: string) => {
+    const response = await postChapter(chapterText);
+    handleSelectWordList();
+    handleCandidateWordList(response);
   }, []);
+  const getTiptapHTML = useCallback(() => {
+    const editorContent = editor.getJSON();
+    const contents = editorContent.content[0].content;
+
+    const result: CharItem[] = [];
+    contents.forEach((content) => {
+      if (content.type === "text") {
+        const textObject = content as TextType;
+        textObject.text.split("").forEach((char) => {
+          result.push({
+            char,
+            isDroppable: true,
+          });
+        });
+      } else if (content.type === "customWord") {
+        const customWordObject = content as NodeType;
+        customWordObject.attrs.text.split(".").forEach((char) => {
+          result.push({
+            char,
+            isDroppable: false,
+          });
+        });
+      }
+    });
+
+    return result;
+  }, [editor]);
   return (
     <>
       {isSelectedWordList ? (
@@ -67,7 +152,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
               </div>
               <div className="mx-8">第1章の単語</div>
               <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
-                {displayedWordList.map((word, index) => (
+                {selectedWordList.map((word, index) => (
                   <div className="border px-4 py-2 rounded-2xl" key={index}>
                     {word}
                   </div>
@@ -80,20 +165,41 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   className="border mx-8 break-all"
                   onClick={activateTextEditor}
                 >
-                  {/* // TODO:ガチでメモ化したい.不快 */}
-                  {textValue.split("").map((char, index) => (
-                    <Droppable key={index} id={index}>
-                      {char}
-                    </Droppable>
-                  ))}
+                  {getTiptapHTML().map((char, index) =>
+                    char.isDroppable ? (
+                      <Droppable key={index} id={index}>
+                        {char.char}
+                      </Droppable>
+                    ) : (
+                      <div key={index} className="border inline px-2 py-1">
+                        {char.char}
+                      </div>
+                    )
+                  )}
                 </div>
               )}
             </div>
             <div className="h-1/3 border-t flex flex-col items-between">
               <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
-                {displayedWordList.map((word, index) => (
-                  <Draggable key={index} id={index}>
-                    <div className="border px-4 py-2 rounded-2xl">{word}</div>
+                {selectedWordList.map((word, index) => (
+                  <Draggable
+                    key={index}
+                    id={index}
+                    draggedText={word}
+                    isDisabled={droppedStrState.some(
+                      (droppedStrState) =>
+                        droppedStrState.id === `draggable-${index}`
+                    )}
+                  >
+                    <div
+                      className={`border px-4 py-2 rounded-2xl ${
+                        droppedStrState.some(
+                          (item) => item.id === `draggable-${index}`
+                        ) && "border-gray-400 text-gray-400"
+                      }`}
+                    >
+                      {word}
+                    </div>
                   </Draggable>
                 ))}
               </div>
@@ -101,10 +207,18 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                 <div className="flex-1" />
                 <div className="px-16 py-4 border">完成</div>
                 <div className="flex-1 flex justify-end">
-                  <div className="text-center border p-2">
+                  <button
+                    className={`text-center border p-2 ${
+                      isComplete
+                        ? "border-black"
+                        : "border-gray-400 text-gray-400"
+                    }`}
+                    disabled={!isComplete}
+                    onClick={() => postChapterRequest("abcdef123")}
+                  >
                     <p className="text-sm">次の章を作成</p>
-                    <p className="text-sm">0/4</p>
-                  </div>
+                    <p className="text-sm">{droppedStrState.length}/4</p>
+                  </button>
                 </div>
               </div>
             </div>
@@ -117,7 +231,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             loop={true}
             onSlideChange={handleSlideChange}
           >
-            {nestedWordList.map((wordList, index) => (
+            {candidateWordList.map((wordList, index) => (
               <SwiperSlide key={index}>
                 <WordList wordList={wordList} />
               </SwiperSlide>

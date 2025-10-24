@@ -6,10 +6,16 @@ import { useDraggable } from "@dnd-kit/core";
 type Props = {
   children: React.ReactNode;
   id: number;
+  draggedText: string;
+  isDisabled: boolean;
 };
-const Draggable: FC<Props> = ({ children, id }) => {
+const Draggable: FC<Props> = ({ children, id, draggedText, isDisabled }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `draggable-${id}`,
+    data: {
+      draggedText,
+    },
+    disabled: isDisabled,
   });
   const style = transform
     ? {
