@@ -42,8 +42,8 @@ const StoryView: FC<Props> = ({ story }) => {
             </div>
 
             <div className="flex flex-wrap gap-2 md:gap-3">
-               {(chapter.words || []).map((word, wordIndex) => (
-                <div
+              {chapter.words.map((word, wordIndex) => (
+                  <div
                   key={wordIndex}
                   className="px-3 md:px-4 py-2 border border-gray-300 rounded-md text-sm md:text-base"
                 >
