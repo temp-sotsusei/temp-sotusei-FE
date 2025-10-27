@@ -37,13 +37,17 @@ const StoryView: FC<Props> = ({ story }) => {
           >
             <div className="text-base md:text-lg font-bold">第{index + 1}章</div>
 
-            <div className="border border-gray-200 rounded-md p-4 md:p-5 bg-white min-h-[120px] md:min-h-[160px] text-sm md:text-base whitespace-pre-wrap">
-              {chapter.story}
-            </div>
+<div
+  className="border border-gray-200 rounded-md p-4 md:p-5 bg-white
+             h-60 md:h-55 overflow-hidden
+             text-sm md:text-base whitespace-pre-wrap"
+>
+  {chapter.story}
+</div>
 
             <div className="flex flex-wrap gap-2 md:gap-3">
               {chapter.words.map((word, wordIndex) => (
-                  <div
+                <div
                   key={wordIndex}
                   className="px-3 md:px-4 py-2 border border-gray-300 rounded-md text-sm md:text-base"
                 >
