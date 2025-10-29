@@ -20,6 +20,7 @@ import Draggable from "@/components/Draggable";
 import {
   DndContext,
   DragEndEvent,
+  DragOverlay,
   TouchSensor,
   UniqueIdentifier,
   useSensor,
@@ -126,7 +127,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     },
     [droppedStrState, editor]
   );
-  const isComplete = droppedStrState.length === 4;
   const postChapterRequest = useCallback(
     async (chapterText: string) => {
       const response = await postChapter(chapterText);
@@ -179,6 +179,9 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       { chapterNum, chapterText, keywords: chapterKeywords },
     ]);
   }, [chaptersPayload, editor, droppedStrState]);
+  const isComplete =
+    droppedStrState.length === 4 || chaptersPayload.length === 3;
+
   console.log(chaptersPayload);
   return (
     <>
@@ -200,9 +203,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     ))}
                   </div>
                   {/* // TODO:ドロップ文字を良い感じに変えたいか？ */}
-                  <div className="border mx-8 break-all">
-                    {chapter.chapterText}
-                  </div>
+                  <div className="border mx-8 h-64">{chapter.chapterText}</div>
                 </div>
               ))}
               {/* <div>
@@ -253,9 +254,15 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   ))}
                 </div>
                 {isTextEditorActive ? (
-                  <EditorContent editor={editor} className="border mx-8" />
+                  <EditorContent
+                    editor={editor}
+                    className="border mx-8 h-64 [&>div]:h-full"
+                  />
                 ) : (
-                  <div className="border mx-8" onClick={activateTextEditor}>
+                  <div
+                    className="border mx-8 h-64"
+                    onClick={activateTextEditor}
+                  >
                     {getTiptapHTML().map((char, index) =>
                       char.isDroppable ? (
                         <Droppable key={index} id={index}>
@@ -325,6 +332,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     </div>
                   </Draggable>
                 ))}
+                <DragOverlay />
               </div>
               <div className="flex items-center justify-between mx-4 h-1/3">
                 <div className="flex-1" />
