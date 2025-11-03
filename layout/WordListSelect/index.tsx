@@ -179,6 +179,21 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       { chapterNum, chapterText, keywords: chapterKeywords },
     ]);
   }, [chaptersPayload, editor, droppedStrState]);
+
+  const [isPosting, setIsPosting] = useState(false);
+  const handleClickNextChapter = async () => {
+    if (isPosting) return;
+    setIsPosting(true);
+  
+    try {
+      await postChapterRequest("abcdef123");
+    } catch (error) {
+      console.error("章の投稿に失敗しました", error);
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
   const isComplete =
     droppedStrState.length === 4 || chaptersPayload.length === 3;
 
@@ -338,7 +353,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                 <div className="flex-1" />
                 <div className="px-16 py-4 border">完成</div>
                 <div className="flex-1 flex justify-end">
-                  <button
+                  {/* <button
                     className={`text-center border p-2 ${
                       isComplete
                         ? "border-black"
@@ -348,6 +363,20 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     onClick={() => postChapterRequest("abcdef123")}
                   >
                     <p className="text-sm">次の章を作成</p>
+                    <p className="text-sm">{droppedStrState.length}/4</p>
+                  </button> */}
+                  <button
+                    className={`text-center border p-2 ${
+                      isComplete && !isPosting
+                        ? "border-black"
+                        : "border-gray-400 text-gray-400"
+                    }`}
+                    disabled={!isComplete || isPosting}
+                    onClick={handleClickNextChapter}
+                  >
+                    <p className="text-sm">
+                      {isPosting ? "送信中..." : "次の章を作成"}
+                    </p>
                     <p className="text-sm">{droppedStrState.length}/4</p>
                   </button>
                 </div>
