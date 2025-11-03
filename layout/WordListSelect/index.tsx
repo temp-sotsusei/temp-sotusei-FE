@@ -275,7 +275,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   />
                 ) : (
                   <div
-                    className="border mx-8 h-64"
+                    className="border mx-8 h-64 break-words"
                     onClick={activateTextEditor}
                   >
                     {getTiptapHTML().map((char, index) =>
