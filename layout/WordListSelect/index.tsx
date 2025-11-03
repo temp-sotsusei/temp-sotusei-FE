@@ -186,7 +186,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   return (
     <>
       {isSelectedWordList ? (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd} onDragStart={editor.commands.blur}>
           <div className="h-screen">
             <div className="h-[calc(66.67%-16px)] mx-4 mb-4 border overflow-y-auto">
               {chaptersPayload.map((chapter, index) => (
