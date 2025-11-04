@@ -8,13 +8,7 @@ import WordList from "@/components/WordList";
 import SlidePrevButton from "@/components/SlidePrevButton";
 import SlideNextButton from "@/components/SlideNextButton";
 import type { Swiper as SwiperType } from "swiper";
-import {
-  clearContent,
-  EditorContent,
-  NodeType,
-  TextType,
-  useEditor,
-} from "@tiptap/react";
+import { EditorContent, NodeType, TextType, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Draggable from "@/components/Draggable";
 import {
@@ -30,6 +24,7 @@ import Droppable from "@/components/Droppable";
 import { postChapter } from "@/apiClient";
 import CustomWord from "@/components/CustomWord";
 import { stripHtml } from "string-strip-html";
+import { MAX_CHAPTER_CHARS } from "@/const";
 
 type ChaptersPayload = {
   chapterNum: number;
@@ -60,7 +55,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const [candidateWordList, setCandidateWordList] =
     useState<string[][]>(nestedWordList);
   const handleCandidateWordList = useCallback((wordList: string[][]) => {
-    console.log(wordList);
     setCandidateWordList(wordList);
   }, []);
   const [selectedWordList, setSelectedWordList] = useState<string[]>();
@@ -77,13 +71,29 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const [droppedStrState, setDroppedStrState] = useState<DroppedStrState[]>([]);
   const editor = useEditor({
     extensions: [StarterKit, CustomWord],
-    // content:
-    //   "あああああああああああああああああああああああああああああああああああああああああああああああいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいいい",
     content:
       "<p>あなたは<span>ぞう</span>ですが、<span>まほうつかい</span>でもありますし、<span>からあげ</span>が好きな<span>あり</span>です。</p>",
     immediatelyRender: false,
     onBlur: () => {
       deactivateTextEditor();
+    },
+    onUpdate: ({ editor }) => {
+      // TODO:外に出したい
+      const MAX_CHAPTER_CHARS = 200;
+      // console.log("エディターの入力文字数");
+      const currentChapterText = stripHtml(editor.getHTML()).result;
+      // console.log("エディタ入力文字数:", currentChapterText.length);
+      if (currentChapterText.length > MAX_CHAPTER_CHARS) {
+        // TODO:文字数の出力する？
+        // console.log("エディタ入力値が200文字を超えている");
+      } else {
+        // console.log("エディタ入力値が200文字以内です!");
+      }
+    },
+    onDelete: (deleteEvent) => {
+      if (deleteEvent.type === "node" && deleteEvent.node.attrs.text) {
+        console.log(deleteEvent.node.attrs.text);
+      }
     },
   });
   const activateTextEditor = useCallback(() => {
@@ -179,10 +189,8 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       { chapterNum, chapterText, keywords: chapterKeywords },
     ]);
   }, [chaptersPayload, editor, droppedStrState]);
-  const isComplete =
-    droppedStrState.length === 4 || chaptersPayload.length === 3;
-
-  console.log(chaptersPayload);
+  const canCreateNextChapter =
+    droppedStrState.length === 4 && chaptersPayload.length <= 3;
   return (
     <>
       {isSelectedWordList ? (
@@ -206,39 +214,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   <div className="border mx-8 h-64">{chapter.chapterText}</div>
                 </div>
               ))}
-              {/* <div>
-                <div className="border flex items-center justify-center py-2 m-4">
-                  第1章
-                </div>
-                <div className="mx-8">第1章の単語</div>
-                <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
-                  {selectedWordList.map((word, index) => (
-                    <div className="border px-4 py-2 rounded-2xl" key={index}>
-                      {word}
-                    </div>
-                  ))}
-                </div>
-                {isTextEditorActive ? (
-                  <EditorContent editor={editor} className="border mx-8" />
-                ) : (
-                  <div
-                    className="border mx-8 break-all"
-                    onClick={activateTextEditor}
-                  >
-                    {getTiptapHTML().map((char, index) =>
-                      char.isDroppable ? (
-                        <Droppable key={index} id={index}>
-                          {char.char}
-                        </Droppable>
-                      ) : (
-                        <div key={index} className="border inline px-2 py-1">
-                          {char.char}
-                        </div>
-                      )
-                    )}
-                  </div>
-                )}
-              </div> */}
               <div>
                 <div className="border flex items-center justify-center py-2 m-4">
                   第{chaptersPayload.length + 1}章
@@ -256,11 +231,18 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                 {isTextEditorActive ? (
                   <EditorContent
                     editor={editor}
-                    className="border mx-8 h-64 [&>div]:h-full"
-                  />
+                    className="border mx-8 h-64 [&>div]:h-full relative"
+                  >
+                    <div className="absolute right-4 top-55 text-gray-300">
+                      {/* // TODO:メモ化したい */}
+                      {`${
+                        stripHtml(editor.getHTML()).result.length
+                      } / ${MAX_CHAPTER_CHARS}`}
+                    </div>
+                  </EditorContent>
                 ) : (
                   <div
-                    className="border mx-8 h-64"
+                    className="border mx-8 h-64 relative"
                     onClick={activateTextEditor}
                   >
                     {getTiptapHTML().map((char, index) =>
@@ -274,40 +256,15 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                         </div>
                       )
                     )}
+                    <div className="absolute right-4 bottom-2 text-gray-300">
+                      {/* // TODO:メモ化したい */}
+                      {`${
+                        stripHtml(editor.getHTML()).result.length
+                      } / ${MAX_CHAPTER_CHARS}`}
+                    </div>
                   </div>
                 )}
               </div>
-              {/* <div className="border flex items-center justify-center py-2 m-4">
-                第1章
-              </div>
-              <div className="mx-8">第1章の単語</div>
-              <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
-                {selectedWordList.map((word, index) => (
-                  <div className="border px-4 py-2 rounded-2xl" key={index}>
-                    {word}
-                  </div>
-                ))}
-              </div>
-              {isTextEditorActive ? (
-                <EditorContent editor={editor} className="border mx-8" />
-              ) : (
-                <div
-                  className="border mx-8 break-all"
-                  onClick={activateTextEditor}
-                >
-                  {getTiptapHTML().map((char, index) =>
-                    char.isDroppable ? (
-                      <Droppable key={index} id={index}>
-                        {char.char}
-                      </Droppable>
-                    ) : (
-                      <div key={index} className="border inline px-2 py-1">
-                        {char.char}
-                      </div>
-                    )
-                  )}
-                </div>
-              )} */}
             </div>
             <div className="h-1/3 border-t flex flex-col items-between">
               <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
@@ -340,11 +297,11 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                 <div className="flex-1 flex justify-end">
                   <button
                     className={`text-center border p-2 ${
-                      isComplete
+                      canCreateNextChapter
                         ? "border-black"
                         : "border-gray-400 text-gray-400"
                     }`}
-                    disabled={!isComplete}
+                    disabled={!canCreateNextChapter}
                     onClick={() => postChapterRequest("abcdef123")}
                   >
                     <p className="text-sm">次の章を作成</p>
