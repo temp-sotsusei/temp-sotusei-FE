@@ -118,7 +118,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             {
               id: active.id,
               droppedString: active.data.current.draggedText,
-              droppedIndex: over.data.current.position,
+              droppedIndex: over.data.current.position + 1,
             },
           ];
         });
@@ -128,7 +128,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           .focus()
           .insertCustomWord(
             active.data.current.draggedText,
-            over.data.current.position
+            over.data.current.position + 1
           )
           .run();
       } else {
@@ -189,12 +189,29 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       { chapterNum, chapterText, keywords: chapterKeywords },
     ]);
   }, [chaptersPayload, editor, droppedStrState]);
+  const [isPosting, setIsPosting] = useState(false);
+  const handleClickNextChapter = async () => {
+    if (isPosting) return;
+    setIsPosting(true);
+
+    try {
+      await postChapterRequest("abcdef123");
+    } catch (error) {
+      console.error("章の投稿に失敗しました", error);
+    } finally {
+      setIsPosting(false);
+    }
+  };
   const canCreateNextChapter =
     droppedStrState.length === 4 && chaptersPayload.length <= 3;
   return (
     <>
       {isSelectedWordList ? (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          onDragEnd={handleDragEnd}
+          onDragStart={editor.commands.blur}
+        >
           <div className="h-screen">
             <div className="h-[calc(66.67%-16px)] mx-4 mb-4 border overflow-y-auto">
               {chaptersPayload.map((chapter, index) => (
@@ -242,7 +259,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   </EditorContent>
                 ) : (
                   <div
-                    className="border mx-8 h-64 relative"
+                    className="border mx-8 h-64 break-words relative"
                     onClick={activateTextEditor}
                   >
                     {getTiptapHTML().map((char, index) =>
@@ -295,7 +312,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                 <div className="flex-1" />
                 <div className="px-16 py-4 border">完成</div>
                 <div className="flex-1 flex justify-end">
-                  <button
+                  {/* <button
                     className={`text-center border p-2 ${
                       canCreateNextChapter
                         ? "border-black"
@@ -305,6 +322,20 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     onClick={() => postChapterRequest("abcdef123")}
                   >
                     <p className="text-sm">次の章を作成</p>
+                    <p className="text-sm">{droppedStrState.length}/4</p>
+                  </button> */}
+                  <button
+                    className={`text-center border p-2 ${
+                      canCreateNextChapter && !isPosting
+                        ? "border-black"
+                        : "border-gray-400 text-gray-400"
+                    }`}
+                    disabled={!canCreateNextChapter || isPosting}
+                    onClick={handleClickNextChapter}
+                  >
+                    <p className="text-sm">
+                      {isPosting ? "送信中..." : "次の章を作成"}
+                    </p>
                     <p className="text-sm">{droppedStrState.length}/4</p>
                   </button>
                 </div>
