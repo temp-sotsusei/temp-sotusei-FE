@@ -1,3 +1,4 @@
+import { UniqueIdentifier } from "@dnd-kit/core";
 import { Node, mergeAttributes, CommandProps } from "@tiptap/core";
 
 export interface CustomWordOptions {
@@ -7,7 +8,11 @@ export interface CustomWordOptions {
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     customWord: {
-      insertCustomWord: (text: string, position?: number) => ReturnType;
+      insertCustomWord: (
+        text: string,
+        droppedId: UniqueIdentifier,
+        position?: number
+      ) => ReturnType;
     };
   }
 }
@@ -26,6 +31,9 @@ const CustomWord = Node.create<CustomWordOptions>({
     return {
       text: {
         default: "",
+      },
+      droppedId: {
+        default: null,
       },
     };
   },
@@ -47,9 +55,9 @@ const CustomWord = Node.create<CustomWordOptions>({
   addCommands() {
     return {
       insertCustomWord:
-        (text: string, position?: number) =>
+        (text: string, droppedId: UniqueIdentifier, position?: number) =>
         ({ chain }: CommandProps) => {
-          const content = { type: this.name, attrs: { text } };
+          const content = { type: this.name, attrs: { text, droppedId } };
 
           // position が指定されていればその位置に挿入
           if (typeof position === "number") {

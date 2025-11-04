@@ -69,6 +69,11 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     setIsTextEditorActive(false);
   }, []);
   const [droppedStrState, setDroppedStrState] = useState<DroppedStrState[]>([]);
+  const removeDroppedStr = useCallback((droppedId: UniqueIdentifier) => {
+    setDroppedStrState((prev) =>
+      prev.filter((droppedStr) => droppedStr.id !== droppedId)
+    );
+  }, []);
   const editor = useEditor({
     extensions: [StarterKit, CustomWord],
     content:
@@ -79,7 +84,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     },
     onUpdate: ({ editor }) => {
       // TODO:外に出したい
-      const MAX_CHAPTER_CHARS = 200;
       // console.log("エディターの入力文字数");
       const currentChapterText = stripHtml(editor.getHTML()).result;
       // console.log("エディタ入力文字数:", currentChapterText.length);
@@ -91,8 +95,9 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       }
     },
     onDelete: (deleteEvent) => {
-      if (deleteEvent.type === "node" && deleteEvent.node.attrs.text) {
-        console.log(deleteEvent.node.attrs.text);
+      if (deleteEvent.type === "node" && deleteEvent.node.attrs.droppedId) {
+        const droppedId = deleteEvent.node.attrs.droppedId;
+        removeDroppedStr(droppedId);
       }
     },
   });
@@ -128,6 +133,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           .focus()
           .insertCustomWord(
             active.data.current.draggedText,
+            active.id,
             over.data.current.position + 1
           )
           .run();
