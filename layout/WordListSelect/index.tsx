@@ -158,6 +158,8 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     const editorContent = editor.getJSON();
     const contents = editorContent.content[0].content ?? [];
 
+    // TODO: dropされた物が分けられる
+    console.log(contents);
     const result: CharItem[] = [];
     contents.forEach((content) => {
       if (content.type === "text") {
