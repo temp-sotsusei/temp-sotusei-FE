@@ -123,7 +123,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             {
               id: active.id,
               droppedString: active.data.current.draggedText,
-              droppedIndex: over.data.current.position + 1,
+              droppedIndex: over.data.current.position + 2,
             },
           ];
         });
@@ -134,7 +134,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           .insertCustomWord(
             active.data.current.draggedText,
             active.id,
-            over.data.current.position + 1
+            over.data.current.position + 2
           )
           .run();
       } else {
