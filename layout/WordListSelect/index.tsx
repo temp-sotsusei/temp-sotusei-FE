@@ -262,7 +262,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                 {isTextEditorActive ? (
                   <EditorContent
                     editor={editor}
-                    className="border mx-8 h-64 [&>div]:h-full relative"
+                    className="border mx-8 h-64 relative [&>div]:h-full [&>div]:overflow-y-auto"
                   >
                     <div className="absolute right-4 top-55 text-gray-300">
                       {/* // TODO:メモ化したい */}
@@ -273,7 +273,11 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   </EditorContent>
                 ) : (
                   <div
+<<<<<<< Updated upstream
                     className="border mx-8 h-64 break-all relative"
+=======
+                    className="border mx-8 h-64 break-words relative overflow-y-auto"
+>>>>>>> Stashed changes
                     onClick={activateTextEditor}
                   >
                     {getTiptapHTML().map((char, index) =>
