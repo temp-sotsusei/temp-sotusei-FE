@@ -273,11 +273,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   </EditorContent>
                 ) : (
                   <div
-<<<<<<< Updated upstream
-                    className="border mx-8 h-64 break-all relative"
-=======
                     className="border mx-8 h-64 break-words relative overflow-y-auto"
->>>>>>> Stashed changes
                     onClick={activateTextEditor}
                   >
                     {getTiptapHTML().map((char, index) =>
