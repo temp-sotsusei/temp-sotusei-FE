@@ -74,6 +74,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       prev.filter((droppedStr) => droppedStr.id !== droppedId)
     );
   }, []);
+  const [isOverChapterText, setIsOverChapterText] = useState(false);
   const editor = useEditor({
     extensions: [StarterKit, CustomWord],
     content:
@@ -86,6 +87,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       // TODO:外に出したい
       // console.log("エディターの入力文字数");
       const currentChapterText = stripHtml(editor.getHTML()).result;
+      setIsOverChapterText(currentChapterText.length > MAX_CHAPTER_CHARS);
       // console.log("エディタ入力文字数:", currentChapterText.length);
       if (currentChapterText.length > MAX_CHAPTER_CHARS) {
         // TODO:文字数の出力する？
@@ -340,15 +342,15 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   </button> */}
                   <button
                     className={`text-center border p-2 ${
-                      canCreateNextChapter && !isPosting
+                      canCreateNextChapter && !isPosting && !isOverChapterText
                         ? "border-black"
                         : "border-gray-400 text-gray-400"
                     }`}
-                    disabled={!canCreateNextChapter || isPosting}
+                    disabled={!canCreateNextChapter || isPosting || isOverChapterText}
                     onClick={handleClickNextChapter}
                   >
                     <p className="text-sm">
-                      {isPosting ? "送信中..." : "次の章を作成"}
+                      {isPosting ? "送信中..." : isOverChapterText ? "文字数が200文字を超えています" : "次の章を作成"}
                     </p>
                     <p className="text-sm">{droppedStrState.length}/4</p>
                   </button>
