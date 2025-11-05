@@ -156,29 +156,35 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   );
   const getTiptapHTML = useCallback(() => {
     const editorContent = editor.getJSON();
-    const contents = editorContent.content[0].content ?? [];
-
-    // TODO: dropされた物が分けられる
-    console.log(contents);
+    // console.log(editorContent.content);
+    // const contents = editorContent.content[0].content ?? [];
+    // TODO: editorContent.contentがArrayになっていて、Array[i]を取ってきて突っ込むが良さそう
+    // console.log(contents);
+    const contentsArray = editorContent.content.map(
+      (content) => content.content
+    );
+    console.log(contentsArray);
     const result: CharItem[] = [];
-    contents.forEach((content) => {
-      if (content.type === "text") {
-        const textObject = content as TextType;
-        textObject.text.split("").forEach((char) => {
-          result.push({
-            char,
-            isDroppable: true,
+    contentsArray.forEach((contents) => {
+      contents.forEach((content) => {
+        if (content.type === "text") {
+          const textObject = content as TextType;
+          textObject.text.split("").forEach((char) => {
+            result.push({
+              char,
+              isDroppable: true,
+            });
           });
-        });
-      } else if (content.type === "customWord") {
-        const customWordObject = content as NodeType;
-        customWordObject.attrs.text.split(".").forEach((char) => {
-          result.push({
-            char,
-            isDroppable: false,
+        } else if (content.type === "customWord") {
+          const customWordObject = content as NodeType;
+          customWordObject.attrs.text.split(".").forEach((char) => {
+            result.push({
+              char,
+              isDroppable: false,
+            });
           });
-        });
-      }
+        }
+      });
     });
 
     return result;
@@ -267,7 +273,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   </EditorContent>
                 ) : (
                   <div
-                    className="border mx-8 h-64 break-words relative"
+                    className="border mx-8 h-64 break-all relative"
                     onClick={activateTextEditor}
                   >
                     {getTiptapHTML().map((char, index) =>
