@@ -42,6 +42,8 @@ type DroppedStrState = {
 type CharItem = {
   char: string;
   isDroppable: boolean;
+  isEmpty: boolean;
+  isNewLine: boolean;
 };
 type Props = {
   nestedWordList: string[][];
@@ -156,16 +158,39 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   );
   const getTiptapHTML = useCallback(() => {
     const editorContent = editor.getJSON();
+    // console.log("------------editorContent----------------");
+    // console.log(editorContent);
+    // console.log("-----------------------------------------");
     // console.log(editorContent.content);
     // const contents = editorContent.content[0].content ?? [];
     // TODO: editorContent.contentがArrayになっていて、Array[i]を取ってきて突っ込むが良さそう
-    // console.log(contents);
+    console.log(editorContent);
+
     const contentsArray = editorContent.content.map(
       (content) => content.content
     );
-    console.log(contentsArray);
     const result: CharItem[] = [];
-    contentsArray.forEach((contents) => {
+    console.log(contentsArray);
+    let currentParagraphIndex = 0;
+    contentsArray.forEach((contents, index) => {
+      // paragraphが変わったタイミングが改行
+      if (currentParagraphIndex !== index) {
+        currentParagraphIndex = index;
+        result.push({
+          char: "",
+          isDroppable: false,
+          isEmpty: false,
+          isNewLine: true,
+        });
+      }
+      if (!contents) {
+        return result.push({
+          char: "",
+          isDroppable: false,
+          isEmpty: true,
+          isNewLine: false,
+        });
+      }
       contents.forEach((content) => {
         if (content.type === "text") {
           const textObject = content as TextType;
@@ -173,6 +198,8 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             result.push({
               char,
               isDroppable: true,
+              isEmpty: false,
+              isNewLine: false,
             });
           });
         } else if (content.type === "customWord") {
@@ -181,11 +208,15 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             result.push({
               char,
               isDroppable: false,
+              isEmpty: false,
+              isNewLine: false,
             });
           });
         }
       });
     });
+
+    console.log(result);
 
     return result;
   }, [editor]);
@@ -277,7 +308,11 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     onClick={activateTextEditor}
                   >
                     {getTiptapHTML().map((char, index) =>
-                      char.isDroppable ? (
+                      char.isNewLine ? (
+                        <br />
+                      ) : char.isEmpty ? (
+                        <div key={index}>&nbsp;</div>
+                      ) : char.isDroppable ? (
                         <Droppable key={index} id={index}>
                           {char.char}
                         </Droppable>
