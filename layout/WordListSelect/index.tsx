@@ -123,12 +123,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     (event: DragEndEvent) => {
       const { over, active } = event;
       if (over.id === "droppable-box") {
-        console.log("droppable-box");
-        console.log(
-          "ドロップされた要素の文字:",
-          active.data.current.draggedText
-        );
-
         setDroppedStrState((prev) => {
           const filteredState = prev.filter((item) => item.id !== active.id);
           return [
@@ -150,15 +144,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             editor.state.doc.content.size - 1 ,
           )
           .run();
-        console.log("text:", stripHtml(editor.getHTML()).result);
-        console.log("textLength:", stripHtml(editor.getHTML()).result.length);
       } else if (over) {
-        console.log("文字列番目:", over.data.current.position);
-        console.log(
-          "ドロップされた要素の文字:",
-          active.data.current.draggedText
-        );
-        console.log("ドロップされた要素id:", active.id);
         setDroppedStrState((prev) => {
           const filteredState = prev.filter((item) => item.id !== active.id);
           return [
@@ -186,7 +172,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     },
     [droppedStrState, editor]
   );
-  console.log(droppedStrState);
   const postChapterRequest = useCallback(
     async (chapterText: string) => {
       const response = await postChapter(chapterText);
