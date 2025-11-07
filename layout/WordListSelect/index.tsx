@@ -136,7 +136,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             {
               id: active.id,
               droppedString: active.data.current.draggedText,
-              droppedIndex: stripHtml(editor.getHTML()).result.length + 1,
+              droppedIndex: editor.state.doc.content.size - 1,
             },
           ];
         });
@@ -147,7 +147,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           .insertCustomWord(
             active.data.current.draggedText,
             active.id,
-            stripHtml(editor.getHTML()).result.length + 1
+            editor.state.doc.content.size - 1 ,
           )
           .run();
         console.log("text:", stripHtml(editor.getHTML()).result);
