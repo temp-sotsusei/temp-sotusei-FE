@@ -76,6 +76,8 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       prev.filter((droppedStr) => droppedStr.id !== droppedId)
     );
   }, []);
+  const [isOverChapterText, setIsOverChapterText] = useState(false);
+  const [contentLength, setContentLength] = useState(0);
   const editor = useEditor({
     extensions: [StarterKit, CustomWord],
     content:
@@ -88,6 +90,8 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       // TODO:外に出したい
       // console.log("エディターの入力文字数");
       const currentChapterText = stripHtml(editor.getHTML()).result;
+      setContentLength(currentChapterText.length);
+      setIsOverChapterText(currentChapterText.length > MAX_CHAPTER_CHARS);
       // console.log("エディタ入力文字数:", currentChapterText.length);
       if (currentChapterText.length > MAX_CHAPTER_CHARS) {
         // TODO:文字数の出力する？
@@ -290,46 +294,50 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     </div>
                   ))}
                 </div>
-                {isTextEditorActive ? (
-                  <EditorContent
-                    editor={editor}
-                    className="border mx-8 h-64 relative [&>div]:h-full [&>div]:overflow-y-auto"
-                  >
-                    <div className="absolute right-4 top-55 text-gray-300">
-                      {/* // TODO:メモ化したい */}
-                      {`${
-                        stripHtml(editor.getHTML()).result.length
-                      } / ${MAX_CHAPTER_CHARS}`}
+                <div className="mx-8">
+                  {isTextEditorActive ? (
+                    <EditorContent
+                      editor={editor}
+                      className={
+                        "border h-64 [&>div]:h-full [&>div]:overflow-y-auto" +
+                        (isOverChapterText ? " border-red-500" : "")
+                      }
+                    ></EditorContent>
+                  ) : (
+                    <div
+                      className={
+                        "border h-64 break-words relative overflow-y-auto" +
+                        (isOverChapterText ? " border-red-500" : "")
+                      }
+                      onClick={activateTextEditor}
+                    >
+                      {getTiptapHTML().map((char, index) =>
+                        char.isNewLine ? (
+                          <div key={index} />
+                        ) : char.isEmpty ? (
+                          <div key={index}>&nbsp;</div>
+                        ) : char.isDroppable ? (
+                          <Droppable key={index} id={index}>
+                            {char.char}
+                          </Droppable>
+                        ) : (
+                          <div key={index} className="border inline px-2 py-1">
+                            {char.char}
+                          </div>
+                        )
+                      )}
                     </div>
-                  </EditorContent>
-                ) : (
+                  )}
                   <div
-                    className="border mx-8 h-64 break-words relative overflow-y-auto"
-                    onClick={activateTextEditor}
+                    className={
+                      "bg-black text-white text-end px-2" +
+                      (isOverChapterText ? " bg-red-500" : "")
+                    }
                   >
-                    {getTiptapHTML().map((char, index) =>
-                      char.isNewLine ? (
-                        <div key={index} />
-                      ) : char.isEmpty ? (
-                        <div key={index}>&nbsp;</div>
-                      ) : char.isDroppable ? (
-                        <Droppable key={index} id={index}>
-                          {char.char}
-                        </Droppable>
-                      ) : (
-                        <div key={index} className="border inline px-2 py-1">
-                          {char.char}
-                        </div>
-                      )
-                    )}
-                    <div className="absolute right-4 bottom-2 text-gray-300">
-                      {/* // TODO:メモ化したい */}
-                      {`${
-                        stripHtml(editor.getHTML()).result.length
-                      } / ${MAX_CHAPTER_CHARS}`}
-                    </div>
+                    {/* // TODO:メモ化したい */}
+                    {`${contentLength} / ${MAX_CHAPTER_CHARS}`}
                   </div>
-                )}
+                </div>
               </div>
             </div>
             <div className="h-1/3 border-t flex flex-col items-between">
@@ -375,15 +383,21 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   </button> */}
                   <button
                     className={`text-center border p-2 ${
-                      canCreateNextChapter && !isPosting
+                      canCreateNextChapter && !isPosting && !isOverChapterText
                         ? "border-black"
                         : "border-gray-400 text-gray-400"
                     }`}
-                    disabled={!canCreateNextChapter || isPosting}
+                    disabled={
+                      !canCreateNextChapter || isPosting || isOverChapterText
+                    }
                     onClick={handleClickNextChapter}
                   >
                     <p className="text-sm">
-                      {isPosting ? "送信中..." : "次の章を作成"}
+                      {isPosting
+                        ? "送信中..."
+                        : isOverChapterText
+                        ? "文字数が200文字を超えています"
+                        : "次の章を作成"}
                     </p>
                     <p className="text-sm">{droppedStrState.length}/4</p>
                   </button>
