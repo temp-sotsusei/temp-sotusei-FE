@@ -277,7 +277,9 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     ))}
                   </div>
                   {/* // TODO:ドロップ文字を良い感じに変えたいか？ */}
-                  <div className="border mx-8 h-64">{chapter.chapterText}</div>
+                  <div className="border mx-8 h-64 break-words">
+                    {chapter.chapterText}
+                  </div>
                 </div>
               ))}
               <div>
