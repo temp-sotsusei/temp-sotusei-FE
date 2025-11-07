@@ -8,7 +8,13 @@ import WordList from "@/components/WordList";
 import SlidePrevButton from "@/components/SlidePrevButton";
 import SlideNextButton from "@/components/SlideNextButton";
 import type { Swiper as SwiperType } from "swiper";
-import { EditorContent, NodeType, TextType, useEditor } from "@tiptap/react";
+import {
+  EditorContent,
+  getText,
+  NodeType,
+  TextType,
+  useEditor,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Draggable from "@/components/Draggable";
 import {
@@ -25,6 +31,7 @@ import { postChapter } from "@/apiClient";
 import CustomWord from "@/components/CustomWord";
 import { stripHtml } from "string-strip-html";
 import { MAX_CHAPTER_CHARS } from "@/const";
+import DroppableBox from "@/components/DroppableBox";
 
 type ChaptersPayload = {
   chapterNum: number;
@@ -115,7 +122,24 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { over, active } = event;
-      if (over) {
+      console.log(event);
+      if (over.id === "droppable-box") {
+        console.log("droppable-box");
+        console.log(
+          "ドロップされた要素の文字:",
+          active.data.current.draggedText
+        );
+        console.log("getText().length:", editor.getText().length);
+        editor
+          .chain()
+          .focus()
+          .insertCustomWord(
+            active.data.current.draggedText,
+            active.id,
+            editor.getText().length
+          )
+          .run();
+      } else if (over) {
         console.log("文字列番目:", over.data.current.position);
         console.log(
           "ドロップされた要素の文字:",
@@ -306,7 +330,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                       }
                     ></EditorContent>
                   ) : (
-                    <div
+                    <DroppableBox
                       className={
                         "border h-64 break-words relative overflow-y-auto" +
                         (isOverChapterText ? " border-red-500" : "")
@@ -328,7 +352,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                           </div>
                         )
                       )}
-                    </div>
+                    </DroppableBox>
                   )}
                   <div
                     className={
