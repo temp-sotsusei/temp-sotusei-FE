@@ -129,7 +129,20 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           "ドロップされた要素の文字:",
           active.data.current.draggedText
         );
-        console.log("getText().length:", editor.getText().length);
+        console.log("textLength:", editor.getText().length);
+
+        setDroppedStrState((prev) => {
+          const filteredState = prev.filter((item) => item.id !== active.id);
+          return [
+            ...filteredState,
+            {
+              id: active.id,
+              droppedString: active.data.current.draggedText,
+              droppedIndex: editor.getText().length,
+            },
+          ];
+        });
+
         editor
           .chain()
           .focus()
