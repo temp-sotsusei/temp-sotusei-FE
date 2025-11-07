@@ -122,14 +122,12 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { over, active } = event;
-      console.log(event);
       if (over.id === "droppable-box") {
         console.log("droppable-box");
         console.log(
           "ドロップされた要素の文字:",
           active.data.current.draggedText
         );
-        console.log("textLength:", editor.getText().length);
 
         setDroppedStrState((prev) => {
           const filteredState = prev.filter((item) => item.id !== active.id);
@@ -138,7 +136,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             {
               id: active.id,
               droppedString: active.data.current.draggedText,
-              droppedIndex: editor.getText().length + 1,
+              droppedIndex: stripHtml(editor.getHTML()).result.length + 1,
             },
           ];
         });
@@ -149,9 +147,11 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           .insertCustomWord(
             active.data.current.draggedText,
             active.id,
-            editor.getText().length + 1
+            stripHtml(editor.getHTML()).result.length + 1
           )
           .run();
+        console.log("text:", stripHtml(editor.getHTML()).result);
+        console.log("textLength:", stripHtml(editor.getHTML()).result.length);
       } else if (over) {
         console.log("文字列番目:", over.data.current.position);
         console.log(
@@ -186,6 +186,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     },
     [droppedStrState, editor]
   );
+  console.log(droppedStrState);
   const postChapterRequest = useCallback(
     async (chapterText: string) => {
       const response = await postChapter(chapterText);
@@ -205,13 +206,11 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     // console.log(editorContent.content);
     // const contents = editorContent.content[0].content ?? [];
     // TODO: editorContent.contentがArrayになっていて、Array[i]を取ってきて突っ込むが良さそう
-    console.log(editorContent);
 
     const contentsArray = editorContent.content.map(
       (content) => content.content
     );
     const result: CharItem[] = [];
-    console.log(contentsArray);
     let currentParagraphIndex = 0;
     contentsArray.forEach((contents, index) => {
       // paragraphが変わったタイミングが改行
@@ -256,8 +255,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
         }
       });
     });
-
-    console.log(result);
 
     return result;
   }, [editor]);
