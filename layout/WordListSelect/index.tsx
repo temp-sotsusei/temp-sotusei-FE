@@ -309,7 +309,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   >
                     {getTiptapHTML().map((char, index) =>
                       char.isNewLine ? (
-                        <br />
+                        <div key={index} />
                       ) : char.isEmpty ? (
                         <div key={index}>&nbsp;</div>
                       ) : char.isDroppable ? (
