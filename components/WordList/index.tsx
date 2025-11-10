@@ -11,7 +11,7 @@ const WordList: FC<Props> = ({ wordList }) => {
       <div className="flex flex-wrap mt-2 gap-2">
         {wordList.map((word, index) => (
           <p
-            className="border border-gray-400 rounded-2xl px-4 py-2"
+            className="border border-gray-400 rounded-2xl px-4 py-2 truncate"
             key={index}
           >
             {word}

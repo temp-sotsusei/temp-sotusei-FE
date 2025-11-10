@@ -8,18 +8,50 @@ import WordList from "@/components/WordList";
 import SlidePrevButton from "@/components/SlidePrevButton";
 import SlideNextButton from "@/components/SlideNextButton";
 import type { Swiper as SwiperType } from "swiper";
-import { EditorContent, useEditor } from "@tiptap/react";
+import {
+  EditorContent,
+  getText,
+  NodeType,
+  TextType,
+  useEditor,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Draggable from "@/components/Draggable";
 import {
   DndContext,
   DragEndEvent,
+  DragOverlay,
   TouchSensor,
+  UniqueIdentifier,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import Droppable from "@/components/Droppable";
+import { postChapter } from "@/apiClient";
+import CustomWord from "@/components/CustomWord";
+import { stripHtml } from "string-strip-html";
+import { MAX_CHAPTER_CHARS } from "@/const";
+import DroppableBox from "@/components/DroppableBox";
 
+type ChaptersPayload = {
+  chapterNum: number;
+  chapterText: string;
+  keywords: {
+    keyword: string;
+    position: number;
+  }[];
+};
+type DroppedStrState = {
+  id: UniqueIdentifier;
+  droppedString: string;
+  droppedIndex: number;
+};
+type CharItem = {
+  char: string;
+  isDroppable: boolean;
+  isEmpty: boolean;
+  isNewLine: boolean;
+};
 type Props = {
   nestedWordList: string[][];
 };
@@ -29,22 +61,57 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const handleSelectWordList = useCallback(() => {
     setIsSelectedWordList((prev) => !prev);
   }, []);
-  const [displayedWordList, setDisplayedWordList] = useState<string[]>();
-  const handleSlideChange = useCallback((swiper: SwiperType) => {
-    setDisplayedWordList(nestedWordList[swiper.realIndex]);
+  const [candidateWordList, setCandidateWordList] =
+    useState<string[][]>(nestedWordList);
+  const handleCandidateWordList = useCallback((wordList: string[][]) => {
+    setCandidateWordList(wordList);
   }, []);
+  const [selectedWordList, setSelectedWordList] = useState<string[]>();
+  const handleSlideChange = useCallback(
+    (swiper: SwiperType) => {
+      setSelectedWordList(candidateWordList[swiper.realIndex]);
+    },
+    [candidateWordList]
+  );
   const [isTextEditorActive, setIsTextEditorActive] = useState(false);
   const deactivateTextEditor = useCallback(() => {
     setIsTextEditorActive(false);
   }, []);
-  const [textValue, setTextValue] = useState<string>("tiptap入力値");
+  const [droppedStrState, setDroppedStrState] = useState<DroppedStrState[]>([]);
+  const removeDroppedStr = useCallback((droppedId: UniqueIdentifier) => {
+    setDroppedStrState((prev) =>
+      prev.filter((droppedStr) => droppedStr.id !== droppedId)
+    );
+  }, []);
+  const [isOverChapterText, setIsOverChapterText] = useState(false);
+  const [contentLength, setContentLength] = useState(0);
   const editor = useEditor({
-    extensions: [StarterKit],
-    content: textValue,
+    extensions: [StarterKit, CustomWord],
+    content:
+      "<p>あなたは<span>ぞう</span>ですが、<span>まほうつかい</span>でもありますし、<span>からあげ</span>が好きな<span>あり</span>です。</p>",
     immediatelyRender: false,
-    onBlur: ({ editor }) => {
-      setTextValue(editor.getText());
+    onBlur: () => {
       deactivateTextEditor();
+    },
+    onUpdate: ({ editor }) => {
+      // TODO:外に出したい
+      // console.log("エディターの入力文字数");
+      const currentChapterText = stripHtml(editor.getHTML()).result;
+      setContentLength(currentChapterText.length);
+      setIsOverChapterText(currentChapterText.length > MAX_CHAPTER_CHARS);
+      // console.log("エディタ入力文字数:", currentChapterText.length);
+      if (currentChapterText.length > MAX_CHAPTER_CHARS) {
+        // TODO:文字数の出力する？
+        // console.log("エディタ入力値が200文字を超えている");
+      } else {
+        // console.log("エディタ入力値が200文字以内です!");
+      }
+    },
+    onDelete: (deleteEvent) => {
+      if (deleteEvent.type === "node" && deleteEvent.node.attrs.droppedId) {
+        const droppedId = deleteEvent.node.attrs.droppedId;
+        removeDroppedStr(droppedId);
+      }
     },
   });
   const activateTextEditor = useCallback(() => {
@@ -52,59 +119,309 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     editor.commands.focus();
   }, [editor]);
   const sensors = useSensors(useSensor(TouchSensor));
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { over } = event;
-    console.log("文字列番目:", over.data.current.position);
-  }, []);
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { over, active } = event;
+      if (over.id === "droppable-box") {
+        setDroppedStrState((prev) => {
+          const filteredState = prev.filter((item) => item.id !== active.id);
+          return [
+            ...filteredState,
+            {
+              id: active.id,
+              droppedString: active.data.current.draggedText,
+              droppedIndex: editor.state.doc.content.size - 1,
+            },
+          ];
+        });
+
+        editor
+          .chain()
+          .focus()
+          .insertCustomWord(
+            active.data.current.draggedText,
+            active.id,
+            editor.state.doc.content.size - 1 ,
+          )
+          .run();
+      } else if (over) {
+        setDroppedStrState((prev) => {
+          const filteredState = prev.filter((item) => item.id !== active.id);
+          return [
+            ...filteredState,
+            {
+              id: active.id,
+              droppedString: active.data.current.draggedText,
+              droppedIndex: over.data.current.position + 2,
+            },
+          ];
+        });
+
+        editor
+          .chain()
+          .focus()
+          .insertCustomWord(
+            active.data.current.draggedText,
+            active.id,
+            over.data.current.position + 2
+          )
+          .run();
+      } else {
+        console.log("drop範囲は入力文字内である必要があります");
+      }
+    },
+    [droppedStrState, editor]
+  );
+  const postChapterRequest = useCallback(
+    async (chapterText: string) => {
+      const response = await postChapter(chapterText);
+      handleSelectWordList();
+      handleCandidateWordList(response);
+      handleSetChaptersPayload();
+      setDroppedStrState([]);
+      editor.commands.clearContent();
+    },
+    [editor, droppedStrState]
+  );
+  const getTiptapHTML = useCallback(() => {
+    const editorContent = editor.getJSON();
+    // console.log("------------editorContent----------------");
+    // console.log(editorContent);
+    // console.log("-----------------------------------------");
+    // console.log(editorContent.content);
+    // const contents = editorContent.content[0].content ?? [];
+    // TODO: editorContent.contentがArrayになっていて、Array[i]を取ってきて突っ込むが良さそう
+
+    const contentsArray = editorContent.content.map(
+      (content) => content.content
+    );
+    const result: CharItem[] = [];
+    let currentParagraphIndex = 0;
+    contentsArray.forEach((contents, index) => {
+      // paragraphが変わったタイミングが改行
+      if (currentParagraphIndex !== index) {
+        currentParagraphIndex = index;
+        result.push({
+          char: "",
+          isDroppable: false,
+          isEmpty: false,
+          isNewLine: true,
+        });
+      }
+      if (!contents) {
+        return result.push({
+          char: "",
+          isDroppable: false,
+          isEmpty: true,
+          isNewLine: false,
+        });
+      }
+      contents.forEach((content) => {
+        if (content.type === "text") {
+          const textObject = content as TextType;
+          textObject.text.split("").forEach((char) => {
+            result.push({
+              char,
+              isDroppable: true,
+              isEmpty: false,
+              isNewLine: false,
+            });
+          });
+        } else if (content.type === "customWord") {
+          const customWordObject = content as NodeType;
+          customWordObject.attrs.text.split(".").forEach((char) => {
+            result.push({
+              char,
+              isDroppable: false,
+              isEmpty: false,
+              isNewLine: false,
+            });
+          });
+        }
+      });
+    });
+
+    return result;
+  }, [editor]);
+  const [chaptersPayload, setChaptersPayload] = useState<ChaptersPayload[]>([]);
+  const handleSetChaptersPayload = useCallback(() => {
+    const chapterNum = chaptersPayload.length + 1;
+    const chapterText = stripHtml(editor.getHTML()).result;
+
+    const chapterKeywords = droppedStrState.map((droppedStrState) => ({
+      keyword: droppedStrState.droppedString,
+      position: droppedStrState.droppedIndex,
+    }));
+    setChaptersPayload([
+      ...chaptersPayload,
+      { chapterNum, chapterText, keywords: chapterKeywords },
+    ]);
+  }, [chaptersPayload, editor, droppedStrState]);
+  const [isPosting, setIsPosting] = useState(false);
+  const handleClickNextChapter = async () => {
+    if (isPosting) return;
+    setIsPosting(true);
+
+    try {
+      await postChapterRequest("abcdef123");
+    } catch (error) {
+      console.error("章の投稿に失敗しました", error);
+    } finally {
+      setIsPosting(false);
+    }
+  };
+  const canCreateNextChapter =
+    droppedStrState.length === 4 && chaptersPayload.length <= 3;
   return (
     <>
       {isSelectedWordList ? (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          onDragEnd={handleDragEnd}
+          onDragStart={editor.commands.blur}
+        >
           <div className="h-screen">
-            <div className="h-[calc(66.67%-16px)] mx-4 mb-4 border">
-              <div className="border flex items-center justify-center py-2 m-4">
-                第1章
-              </div>
-              <div className="mx-8">第1章の単語</div>
-              <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
-                {displayedWordList.map((word, index) => (
-                  <div className="border px-4 py-2 rounded-2xl" key={index}>
-                    {word}
+            <div className="h-[calc(66.67%-16px)] mx-4 mb-4 border overflow-y-auto">
+              {chaptersPayload.map((chapter, index) => (
+                <div key={index}>
+                  <div className="border flex items-center justify-center py-2 m-4">
+                    第{chapter.chapterNum}章
                   </div>
-                ))}
-              </div>
-              {isTextEditorActive ? (
-                <EditorContent editor={editor} className="border mx-8" />
-              ) : (
-                <div
-                  className="border mx-8 break-all"
-                  onClick={activateTextEditor}
-                >
-                  {/* // TODO:ガチでメモ化したい.不快 */}
-                  {textValue.split("").map((char, index) => (
-                    <Droppable key={index} id={index}>
-                      {char}
-                    </Droppable>
+                  <div className="mx-8">第{chapter.chapterNum}章の単語</div>
+                  <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
+                    {chapter.keywords.map((keyword, index) => (
+                      <div className="border px-4 py-2 rounded-2xl" key={index}>
+                        {keyword.keyword}
+                      </div>
+                    ))}
+                  </div>
+                  {/* // TODO:ドロップ文字を良い感じに変えたいか？ */}
+                  <div className="border mx-8 h-64 break-words">
+                    {chapter.chapterText}
+                  </div>
+                </div>
+              ))}
+              <div>
+                <div className="border flex items-center justify-center py-2 m-4">
+                  第{chaptersPayload.length + 1}章
+                </div>
+                <div className="mx-8">
+                  第{chaptersPayload.length + 1}章の単語
+                </div>
+                <div className="my-2 mx-8 flex items-center justify-start gap-x-2 gap-y-2 flex-wrap">
+                  {selectedWordList.map((word, index) => (
+                    <div className="border px-4 py-2 rounded-2xl" key={index}>
+                      {word}
+                    </div>
                   ))}
                 </div>
-              )}
+                <div className="mx-8">
+                  {isTextEditorActive ? (
+                    <EditorContent
+                      editor={editor}
+                      className={
+                        "border h-64 [&>div]:h-full [&>div]:overflow-y-auto" +
+                        (isOverChapterText ? " border-red-500" : "")
+                      }
+                    ></EditorContent>
+                  ) : (
+                    <DroppableBox
+                      className={
+                        "border h-64 break-words relative overflow-y-auto" +
+                        (isOverChapterText ? " border-red-500" : "")
+                      }
+                      onClick={activateTextEditor}
+                    >
+                      {getTiptapHTML().map((char, index) =>
+                        char.isNewLine ? (
+                          <div key={index} />
+                        ) : char.isEmpty ? (
+                          <div key={index}>&nbsp;</div>
+                        ) : char.isDroppable ? (
+                          <Droppable key={index} id={index}>
+                            {char.char}
+                          </Droppable>
+                        ) : (
+                          <div key={index} className="border inline px-2 py-1">
+                            {char.char}
+                          </div>
+                        )
+                      )}
+                    </DroppableBox>
+                  )}
+                  <div
+                    className={
+                      "bg-black text-white text-end px-2" +
+                      (isOverChapterText ? " bg-red-500" : "")
+                    }
+                  >
+                    {/* // TODO:メモ化したい */}
+                    {`${contentLength} / ${MAX_CHAPTER_CHARS}`}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="h-1/3 border-t flex flex-col items-between">
               <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
-                {displayedWordList.map((word, index) => (
-                  <Draggable key={index} id={index}>
-                    <div className="border px-4 py-2 rounded-2xl">{word}</div>
+                {selectedWordList.map((word, index) => (
+                  <Draggable
+                    key={index}
+                    id={index}
+                    draggedText={word}
+                    isDisabled={droppedStrState.some(
+                      (droppedStrState) =>
+                        droppedStrState.id === `draggable-${index}`
+                    )}
+                  >
+                    <div
+                      className={`border px-4 py-2 rounded-2xl ${
+                        droppedStrState.some(
+                          (item) => item.id === `draggable-${index}`
+                        ) && "border-gray-400 text-gray-400"
+                      }`}
+                    >
+                      {word}
+                    </div>
                   </Draggable>
                 ))}
+                <DragOverlay />
               </div>
               <div className="flex items-center justify-between mx-4 h-1/3">
                 <div className="flex-1" />
                 <div className="px-16 py-4 border">完成</div>
                 <div className="flex-1 flex justify-end">
-                  <div className="text-center border p-2">
+                  {/* <button
+                    className={`text-center border p-2 ${
+                      canCreateNextChapter
+                        ? "border-black"
+                        : "border-gray-400 text-gray-400"
+                    }`}
+                    disabled={!canCreateNextChapter}
+                    onClick={() => postChapterRequest("abcdef123")}
+                  >
                     <p className="text-sm">次の章を作成</p>
-                    <p className="text-sm">0/4</p>
-                  </div>
+                    <p className="text-sm">{droppedStrState.length}/4</p>
+                  </button> */}
+                  <button
+                    className={`text-center border p-2 ${
+                      canCreateNextChapter && !isPosting && !isOverChapterText
+                        ? "border-black"
+                        : "border-gray-400 text-gray-400"
+                    }`}
+                    disabled={
+                      !canCreateNextChapter || isPosting || isOverChapterText
+                    }
+                    onClick={handleClickNextChapter}
+                  >
+                    <p className="text-sm">
+                      {isPosting
+                        ? "送信中..."
+                        : isOverChapterText
+                        ? "文字数が200文字を超えています"
+                        : "次の章を作成"}
+                    </p>
+                    <p className="text-sm">{droppedStrState.length}/4</p>
+                  </button>
                 </div>
               </div>
             </div>
@@ -117,7 +434,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             loop={true}
             onSlideChange={handleSlideChange}
           >
-            {nestedWordList.map((wordList, index) => (
+            {candidateWordList.map((wordList, index) => (
               <SwiperSlide key={index}>
                 <WordList wordList={wordList} />
               </SwiperSlide>

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { FC, useState } from "react";
 import Calendar from "react-calendar";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { APP_TITLE } from "@/constants";
+import { APP_TITLE } from "@/const";
 
 import "swiper/css";
 import "react-calendar/dist/Calendar.css";
