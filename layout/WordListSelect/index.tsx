@@ -24,16 +24,16 @@ import Droppable from "@/components/Droppable";
 import { postChapter } from "@/apiClient";
 import CustomWord from "@/components/CustomWord";
 import { stripHtml } from "string-strip-html";
-import { MAX_CHAPTER_CHARS } from "@/const";
+import { MAX_CHAPTER_CHARS, MAX_DROPPABLE_ELEMENTS } from "@/const";
 import DroppableBox from "@/components/DroppableBox";
 
-type renderChapterJSON = {
+type RenderChapterItem = {
   text: string;
   isInputText: boolean;
 };
 type ChaptersPayload = {
   chapterNum: number;
-  renderChapterText: string;
+  renderChapterItem: RenderChapterItem[];
   submissionChapterText: string;
   keywords: {
     keyword: string;
@@ -259,36 +259,56 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     const chapterNum = chaptersPayload.length + 1;
 
     const chapterText = editor.getText({ blockSeparator: "\n" });
-    const chapterKeywords = droppedStrState.map((droppedStrState) => ({
-      keyword: droppedStrState.droppedString,
-      position: droppedStrState.stringBuildDroppedIndex,
-    }));
+    const chapterKeywords = droppedStrState
+      .map((droppedStrState) => ({
+        keyword: droppedStrState.droppedString,
+        position: droppedStrState.stringBuildDroppedIndex,
+      }))
+      .sort((current, next) => current.position - next.position);
     console.log("chapterText:", chapterText);
     console.log("chapterKeywords:", chapterKeywords);
 
-    // TOOD:renderChapterJSON作る
-    const renderChapterJSON =
-      // console.log("chapterText:", chapterText);
-      // console.log("chapterKeywords:", chapterKeywords);
-      // console.log("renderChapteText:", renderChapterText);
-      // console.log(
-      //   "insertKeywords:",
-      //   insertKeywords(renderChapterText, chapterKeywords)
-      // );
-      // TODO:先にchapterTextをサニタイズする
-      // droppedStrStateはタグ変化して文字列に入れたい
+    // MEMO:考慮パターン:
+    // Text -> Node
+    // Node -> Node
+    // 無 -> Node
+    let renderChapterItem: RenderChapterItem[] = [];
+    let currentNodePostion = 0;
+    chapterKeywords.forEach(({ keyword, position }, index) => {
+      if (
+        currentNodePostion !== position &&
+        chapterText.slice(currentNodePostion, position)
+      ) {
+        renderChapterItem.push({
+          text: chapterText.slice(currentNodePostion, position),
+          isInputText: true,
+        });
+      }
+      renderChapterItem.push({
+        text: keyword,
+        isInputText: false,
+      });
+      if (
+        index + 1 === MAX_DROPPABLE_ELEMENTS &&
+        chapterText.slice(currentNodePostion)
+      ) {
+        renderChapterItem.push({
+          text: chapterText.slice(currentNodePostion),
+          isInputText: true,
+        });
+      }
+      currentNodePostion = position;
+    });
 
-      // MEMO: chapterTextにNodeの文字列を入れると、Nodeとして表示するにはサニタイズを無効化する必要があるが、ユーザの入力値をサニタイズして表示することが出来ないので、chapterTextにdrop文字列を描画時に混ぜることで実装する
-      // MEMO: POST時にdrop文字列をchapterTextに混ぜると、feedback画面で使いずらそう + 混ぜるなら何のためにkeywordsが必要なのか不明
-      setChaptersPayload([
-        ...chaptersPayload,
-        {
-          chapterNum,
-          renderChapterText: "aiueo",
-          submissionChapterText: chapterText,
-          keywords: chapterKeywords,
-        },
-      ]);
+    setChaptersPayload([
+      ...chaptersPayload,
+      {
+        chapterNum,
+        renderChapterItem,
+        submissionChapterText: chapterText,
+        keywords: chapterKeywords,
+      },
+    ]);
   }, [chaptersPayload, editor, droppedStrState]);
   console.log("chaptersPayload:", chaptersPayload);
   const [isPosting, setIsPosting] = useState(false);
@@ -330,13 +350,16 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     ))}
                   </div>
                   {/* // TODO:久乗にJSX側に変更があったことを伝える */}
-                  <div
-                    className="border mx-8 h-64 break-words whitespace-pre-wrap"
-                    dangerouslySetInnerHTML={{
-                      __html: chapter.renderChapterText,
-                    }}
-                  >
-                    {/* {chapter.renderChapterText} */}
+                  <div className="border mx-8 h-64 break-words whitespace-pre-wrap">
+                    {chapter.renderChapterItem.map((chapterItem) =>
+                      chapterItem.isInputText ? (
+                        <span>{chapterItem.text}</span>
+                      ) : (
+                        <div className="px-2 py-1 border rounded-2xl inline">
+                          {chapterItem.text}
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               ))}
