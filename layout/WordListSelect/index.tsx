@@ -38,7 +38,8 @@ type ChaptersPayload = {
 type DroppedStrState = {
   id: UniqueIdentifier;
   droppedString: string;
-  droppedIndex: number;
+  stringBuildDroppedIndex: number;
+  currentChapterDisplayDroppedIndex: number;
 };
 type CharItem = {
   char: string;
@@ -81,8 +82,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const [contentLength, setContentLength] = useState(0);
   const editor = useEditor({
     extensions: [StarterKit, CustomWord],
-    content:
-      "<p>あなたは<span>ぞう</span>ですが、<span>まほうつかい</span>でもありますし、<span>からあげ</span>が好きな<span>あり</span>です。</p>",
+    content: "",
     immediatelyRender: false,
     onBlur: () => {
       deactivateTextEditor();
@@ -116,16 +116,25 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { over, active } = event;
-      // MEMO: 範囲外
+
+      // MEMO: 範囲外ドロップ時に発火する
       if (over.id === "droppable-box") {
         setDroppedStrState((prev) => {
           const filteredState = prev.filter((item) => item.id !== active.id);
+          const chapterText = editor.getText({ blockSeparator: "\n" });
+          // MEMO: index1ずれてるかも
+          const totalLength = filteredState.reduce(
+            (sum, item) => sum + item.droppedString.length,
+            0
+          );
           return [
             ...filteredState,
             {
               id: active.id,
               droppedString: active.data.current.draggedText,
-              droppedIndex: editor.state.doc.content.size - 1,
+              stringBuildDroppedIndex: chapterText.length + totalLength,
+              currentChapterDisplayDroppedIndex:
+                editor.state.doc.content.size - 1,
             },
           ];
         });
@@ -140,6 +149,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           )
           .run();
       } else if (over) {
+        // MEMO:入力文字ドロップ時に発火する
         setDroppedStrState((prev) => {
           const filteredState = prev.filter((item) => item.id !== active.id);
           return [
@@ -147,7 +157,8 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             {
               id: active.id,
               droppedString: active.data.current.draggedText,
-              droppedIndex: over.data.current.position + 2,
+              stringBuildDroppedIndex: over.data.current.position + 2,
+              currentChapterDisplayDroppedIndex: over.data.current.position + 2,
             },
           ];
         });
@@ -243,21 +254,27 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     const chapterNum = chaptersPayload.length + 1;
 
     const chapterText = editor.getText({ blockSeparator: "\n" });
-    console.log("chapterText:", chapterText);
     const chapterKeywords = droppedStrState.map((droppedStrState) => ({
       keyword: droppedStrState.droppedString,
-      position: droppedStrState.droppedIndex,
+      position: droppedStrState.stringBuildDroppedIndex,
     }));
+    console.log("chapterText:", chapterText);
+    console.log("chapterKeywords:", chapterKeywords);
+
+    const sortedKeywords = [...chapterKeywords].sort(
+      (a, b) => a.position - b.position
+    );
+    console.log("sortedKeywords:", sortedKeywords);
+    // TODO:先にchapterTextをサニタイズする
+    // droppedStrStateはタグ変化して文字列に入れたい
+
     // MEMO: chapterTextにNodeの文字列を入れると、Nodeとして表示するにはサニタイズを無効化する必要があるが、ユーザの入力値をサニタイズして表示することが出来ないので、chapterTextにdrop文字列を描画時に混ぜることで実装する
     // MEMO: POST時にdrop文字列をchapterTextに混ぜると、feedback画面で使いずらそう + 混ぜるなら何のためにkeywordsが必要なのか不明
-    // 混ぜない択 => 使いやすい
     setChaptersPayload([
       ...chaptersPayload,
       { chapterNum, chapterText: chapterText, keywords: chapterKeywords },
     ]);
   }, [chaptersPayload, editor, droppedStrState]);
-  console.log("droppedStrState:", droppedStrState);
-  console.log("chaptersPayload:", chaptersPayload);
   const [isPosting, setIsPosting] = useState(false);
   const handleClickNextChapter = async () => {
     if (isPosting) return;
@@ -273,6 +290,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   };
   const canCreateNextChapter =
     droppedStrState.length === 4 && chaptersPayload.length <= 3;
+  console.log("chapterPayloads:", chaptersPayload);
   return (
     <>
       {isSelectedWordList ? (
@@ -296,9 +314,18 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                       </div>
                     ))}
                   </div>
-                  {/* // TODO:ドロップ文字を良い感じに変えたいか？ */}
+                  {/* // TODO:久乗にJSX側に変更があったことを伝える */}
                   <div className="border mx-8 h-64 break-words whitespace-pre-wrap">
-                    {chapter.chapterText}
+                    {chapter.chapterText
+                      .split("")
+                      .map((char, index) =>
+                        // index === chapter.keywords ? (
+                        //   <span>{char}</span>
+                        // ) : (
+                        //   <div>あいうえお</div>
+                        // )
+                      )}
+                    {/* {chapter.chapterText} */}
                   </div>
                 </div>
               ))}
