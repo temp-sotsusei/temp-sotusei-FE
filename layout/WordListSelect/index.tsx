@@ -27,9 +27,14 @@ import { stripHtml } from "string-strip-html";
 import { MAX_CHAPTER_CHARS } from "@/const";
 import DroppableBox from "@/components/DroppableBox";
 
+type renderChapterJSON = {
+  text: string;
+  isInputText: boolean;
+};
 type ChaptersPayload = {
   chapterNum: number;
-  chapterText: string;
+  renderChapterText: string;
+  submissionChapterText: string;
   keywords: {
     keyword: string;
     position: number;
@@ -261,20 +266,31 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     console.log("chapterText:", chapterText);
     console.log("chapterKeywords:", chapterKeywords);
 
-    const sortedKeywords = [...chapterKeywords].sort(
-      (a, b) => a.position - b.position
-    );
-    console.log("sortedKeywords:", sortedKeywords);
-    // TODO:先にchapterTextをサニタイズする
-    // droppedStrStateはタグ変化して文字列に入れたい
+    // TOOD:renderChapterJSON作る
+    const renderChapterJSON =
+      // console.log("chapterText:", chapterText);
+      // console.log("chapterKeywords:", chapterKeywords);
+      // console.log("renderChapteText:", renderChapterText);
+      // console.log(
+      //   "insertKeywords:",
+      //   insertKeywords(renderChapterText, chapterKeywords)
+      // );
+      // TODO:先にchapterTextをサニタイズする
+      // droppedStrStateはタグ変化して文字列に入れたい
 
-    // MEMO: chapterTextにNodeの文字列を入れると、Nodeとして表示するにはサニタイズを無効化する必要があるが、ユーザの入力値をサニタイズして表示することが出来ないので、chapterTextにdrop文字列を描画時に混ぜることで実装する
-    // MEMO: POST時にdrop文字列をchapterTextに混ぜると、feedback画面で使いずらそう + 混ぜるなら何のためにkeywordsが必要なのか不明
-    setChaptersPayload([
-      ...chaptersPayload,
-      { chapterNum, chapterText: chapterText, keywords: chapterKeywords },
-    ]);
+      // MEMO: chapterTextにNodeの文字列を入れると、Nodeとして表示するにはサニタイズを無効化する必要があるが、ユーザの入力値をサニタイズして表示することが出来ないので、chapterTextにdrop文字列を描画時に混ぜることで実装する
+      // MEMO: POST時にdrop文字列をchapterTextに混ぜると、feedback画面で使いずらそう + 混ぜるなら何のためにkeywordsが必要なのか不明
+      setChaptersPayload([
+        ...chaptersPayload,
+        {
+          chapterNum,
+          renderChapterText: "aiueo",
+          submissionChapterText: chapterText,
+          keywords: chapterKeywords,
+        },
+      ]);
   }, [chaptersPayload, editor, droppedStrState]);
+  console.log("chaptersPayload:", chaptersPayload);
   const [isPosting, setIsPosting] = useState(false);
   const handleClickNextChapter = async () => {
     if (isPosting) return;
@@ -290,7 +306,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   };
   const canCreateNextChapter =
     droppedStrState.length === 4 && chaptersPayload.length <= 3;
-  console.log("chapterPayloads:", chaptersPayload);
   return (
     <>
       {isSelectedWordList ? (
@@ -315,17 +330,13 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     ))}
                   </div>
                   {/* // TODO:久乗にJSX側に変更があったことを伝える */}
-                  <div className="border mx-8 h-64 break-words whitespace-pre-wrap">
-                    {chapter.chapterText
-                      .split("")
-                      .map((char, index) =>
-                        // index === chapter.keywords ? (
-                        //   <span>{char}</span>
-                        // ) : (
-                        //   <div>あいうえお</div>
-                        // )
-                      )}
-                    {/* {chapter.chapterText} */}
+                  <div
+                    className="border mx-8 h-64 break-words whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{
+                      __html: chapter.renderChapterText,
+                    }}
+                  >
+                    {/* {chapter.renderChapterText} */}
                   </div>
                 </div>
               ))}
