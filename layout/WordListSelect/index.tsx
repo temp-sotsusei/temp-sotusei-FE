@@ -8,13 +8,7 @@ import WordList from "@/components/WordList";
 import SlidePrevButton from "@/components/SlidePrevButton";
 import SlideNextButton from "@/components/SlideNextButton";
 import type { Swiper as SwiperType } from "swiper";
-import {
-  EditorContent,
-  getText,
-  NodeType,
-  TextType,
-  useEditor,
-} from "@tiptap/react";
+import { EditorContent, NodeType, TextType, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Draggable from "@/components/Draggable";
 import {
@@ -122,6 +116,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { over, active } = event;
+      // MEMO: 範囲外
       if (over.id === "droppable-box") {
         setDroppedStrState((prev) => {
           const filteredState = prev.filter((item) => item.id !== active.id);
@@ -141,7 +136,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           .insertCustomWord(
             active.data.current.draggedText,
             active.id,
-            editor.state.doc.content.size - 1 ,
+            editor.state.doc.content.size - 1
           )
           .run();
       } else if (over) {
@@ -246,17 +241,23 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   const [chaptersPayload, setChaptersPayload] = useState<ChaptersPayload[]>([]);
   const handleSetChaptersPayload = useCallback(() => {
     const chapterNum = chaptersPayload.length + 1;
-    const chapterText = stripHtml(editor.getHTML()).result;
 
+    const chapterText = editor.getText({ blockSeparator: "\n" });
+    console.log("chapterText:", chapterText);
     const chapterKeywords = droppedStrState.map((droppedStrState) => ({
       keyword: droppedStrState.droppedString,
       position: droppedStrState.droppedIndex,
     }));
+    // MEMO: chapterTextにNodeの文字列を入れると、Nodeとして表示するにはサニタイズを無効化する必要があるが、ユーザの入力値をサニタイズして表示することが出来ないので、chapterTextにdrop文字列を描画時に混ぜることで実装する
+    // MEMO: POST時にdrop文字列をchapterTextに混ぜると、feedback画面で使いずらそう + 混ぜるなら何のためにkeywordsが必要なのか不明
+    // 混ぜない択 => 使いやすい
     setChaptersPayload([
       ...chaptersPayload,
-      { chapterNum, chapterText, keywords: chapterKeywords },
+      { chapterNum, chapterText: chapterText, keywords: chapterKeywords },
     ]);
   }, [chaptersPayload, editor, droppedStrState]);
+  console.log("droppedStrState:", droppedStrState);
+  console.log("chaptersPayload:", chaptersPayload);
   const [isPosting, setIsPosting] = useState(false);
   const handleClickNextChapter = async () => {
     if (isPosting) return;
@@ -296,7 +297,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                     ))}
                   </div>
                   {/* // TODO:ドロップ文字を良い感じに変えたいか？ */}
-                  <div className="border mx-8 h-64 break-words">
+                  <div className="border mx-8 h-64 break-words whitespace-pre-wrap">
                     {chapter.chapterText}
                   </div>
                 </div>
