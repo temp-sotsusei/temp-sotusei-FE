@@ -26,6 +26,7 @@ import CustomWord from "@/components/CustomWord";
 import { stripHtml } from "string-strip-html";
 import { MAX_CHAPTER_CHARS, MAX_DROPPABLE_ELEMENTS } from "@/const";
 import DroppableBox from "@/components/DroppableBox";
+import { mergeDroppedText } from "@/uitls/mergeDroppedText";
 
 type RenderChapterItem = {
   text: string;
@@ -40,9 +41,13 @@ type ChaptersPayload = {
     position: number;
   }[];
 };
-type DroppedStrState = {
+// TODO: 共有する型をlayoutから剥がす
+export type DroppedStrState = {
   id: UniqueIdentifier;
   droppedString: string;
+  // MEMO: ユーザ入力値の何番目かを保持する
+  userInputDroppedIndex: number;
+  // MEMO: Nodeが含まれた入力値の何番目か保持している.editor.getText()の都合上使えなさそうなので消去予定
   stringBuildDroppedIndex: number;
   currentChapterDisplayDroppedIndex: number;
 };
@@ -93,12 +98,9 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       deactivateTextEditor();
     },
     onUpdate: ({ editor }) => {
-      // TODO:外に出したい
-      // console.log("エディターの入力文字数");
       const currentChapterText = stripHtml(editor.getHTML()).result;
       setContentLength(currentChapterText.length);
       setIsOverChapterText(currentChapterText.length > MAX_CHAPTER_CHARS);
-      // console.log("エディタ入力文字数:", currentChapterText.length);
       if (currentChapterText.length > MAX_CHAPTER_CHARS) {
         // TODO:文字数の出力する？
         // console.log("エディタ入力値が200文字を超えている");
@@ -137,6 +139,7 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             {
               id: active.id,
               droppedString: active.data.current.draggedText,
+              userInputDroppedIndex: chapterText.length,
               stringBuildDroppedIndex: chapterText.length + totalLength,
               currentChapterDisplayDroppedIndex:
                 editor.state.doc.content.size - 1,
@@ -154,6 +157,14 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
           )
           .run();
       } else if (over) {
+        // MEMO: positionがdropされた時、以下のようにover.data.current.positionの値がズレる
+        // MEMO: 表示時に要素のindex番目で振っているからなのでgetTiptapHTMLで新しくpositionを採番することで解決するが、div側表示がズレる可能性がある
+        // drop文字列 0個目 -> -1
+        // drop文字列 1個目 -> 0
+        // drop文字列 2個目 -> +1
+        // drop文字列 3個目 -> +2
+        // HACK: 対処療法としてズレを吸収しておくが、根本的な解決になっていない
+
         // MEMO:入力文字ドロップ時に発火する
         setDroppedStrState((prev) => {
           const filteredState = prev.filter((item) => item.id !== active.id);
@@ -162,6 +173,8 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
             {
               id: active.id,
               droppedString: active.data.current.draggedText,
+              userInputDroppedIndex:
+                over.data.current.position + 1 - droppedStrState.length,
               stringBuildDroppedIndex: over.data.current.position + 2,
               currentChapterDisplayDroppedIndex: over.data.current.position + 2,
             },
@@ -196,12 +209,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   );
   const getTiptapHTML = useCallback(() => {
     const editorContent = editor.getJSON();
-    // console.log("------------editorContent----------------");
-    // console.log(editorContent);
-    // console.log("-----------------------------------------");
-    // console.log(editorContent.content);
-    // const contents = editorContent.content[0].content ?? [];
-    // TODO: editorContent.contentがArrayになっていて、Array[i]を取ってきて突っ込むが良さそう
 
     const contentsArray = editorContent.content.map(
       (content) => content.content
@@ -262,11 +269,9 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     const chapterKeywords = droppedStrState
       .map((droppedStrState) => ({
         keyword: droppedStrState.droppedString,
-        position: droppedStrState.stringBuildDroppedIndex,
+        position: droppedStrState.userInputDroppedIndex,
       }))
       .sort((current, next) => current.position - next.position);
-    console.log("chapterText:", chapterText);
-    console.log("chapterKeywords:", chapterKeywords);
 
     // MEMO:考慮パターン:
     // Text -> Node
@@ -274,13 +279,12 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
     // 無 -> Node
     let renderChapterItem: RenderChapterItem[] = [];
     let currentNodePostion = 0;
+
     chapterKeywords.forEach(({ keyword, position }, index) => {
-      if (
-        currentNodePostion !== position &&
-        chapterText.slice(currentNodePostion, position)
-      ) {
+      const leftText = chapterText.slice(currentNodePostion, position);
+      if (leftText) {
         renderChapterItem.push({
-          text: chapterText.slice(currentNodePostion, position),
+          text: leftText,
           isInputText: true,
         });
       }
@@ -288,15 +292,15 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
         text: keyword,
         isInputText: false,
       });
-      if (
-        index + 1 === MAX_DROPPABLE_ELEMENTS &&
-        chapterText.slice(currentNodePostion)
-      ) {
+
+      const rightText = chapterText.slice(position);
+      if (index + 1 === MAX_DROPPABLE_ELEMENTS && rightText) {
         renderChapterItem.push({
-          text: chapterText.slice(currentNodePostion),
+          text: rightText,
           isInputText: true,
         });
       }
+
       currentNodePostion = position;
     });
 
@@ -310,14 +314,16 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       },
     ]);
   }, [chaptersPayload, editor, droppedStrState]);
-  console.log("chaptersPayload:", chaptersPayload);
   const [isPosting, setIsPosting] = useState(false);
+  // TODO:これはさすがに追いづらいかも
   const handleClickNextChapter = async () => {
     if (isPosting) return;
     setIsPosting(true);
 
+    const chapterText = editor.getText({ blockSeparator: "\n" });
+    const mergedText = mergeDroppedText(chapterText, droppedStrState);
     try {
-      await postChapterRequest("abcdef123");
+      await postChapterRequest(mergedText);
     } catch (error) {
       console.error("章の投稿に失敗しました", error);
     } finally {
@@ -351,11 +357,14 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
                   </div>
                   {/* // TODO:久乗にJSX側に変更があったことを伝える */}
                   <div className="border mx-8 h-64 break-words whitespace-pre-wrap">
-                    {chapter.renderChapterItem.map((chapterItem) =>
+                    {chapter.renderChapterItem.map((chapterItem, index) =>
                       chapterItem.isInputText ? (
-                        <span>{chapterItem.text}</span>
+                        <span key={index}>{chapterItem.text}</span>
                       ) : (
-                        <div className="px-2 py-1 border rounded-2xl inline">
+                        <div
+                          key={index}
+                          className="px-2 py-1 border rounded-2xl inline"
+                        >
                           {chapterItem.text}
                         </div>
                       )
