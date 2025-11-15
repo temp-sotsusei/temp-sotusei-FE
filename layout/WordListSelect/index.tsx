@@ -26,6 +26,7 @@ import CustomWord from "@/components/CustomWord";
 import { stripHtml } from "string-strip-html";
 import { MAX_CHAPTER_CHARS, MAX_DROPPABLE_ELEMENTS } from "@/const";
 import DroppableBox from "@/components/DroppableBox";
+import { mergeDroppedText } from "@/uitls/mergeDroppedText";
 
 type RenderChapterItem = {
   text: string;
@@ -93,12 +94,9 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       deactivateTextEditor();
     },
     onUpdate: ({ editor }) => {
-      // TODO:外に出したい
-      // console.log("エディターの入力文字数");
       const currentChapterText = stripHtml(editor.getHTML()).result;
       setContentLength(currentChapterText.length);
       setIsOverChapterText(currentChapterText.length > MAX_CHAPTER_CHARS);
-      // console.log("エディタ入力文字数:", currentChapterText.length);
       if (currentChapterText.length > MAX_CHAPTER_CHARS) {
         // TODO:文字数の出力する？
         // console.log("エディタ入力値が200文字を超えている");
@@ -196,12 +194,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
   );
   const getTiptapHTML = useCallback(() => {
     const editorContent = editor.getJSON();
-    // console.log("------------editorContent----------------");
-    // console.log(editorContent);
-    // console.log("-----------------------------------------");
-    // console.log(editorContent.content);
-    // const contents = editorContent.content[0].content ?? [];
-    // TODO: editorContent.contentがArrayになっていて、Array[i]を取ってきて突っ込むが良さそう
 
     const contentsArray = editorContent.content.map(
       (content) => content.content
@@ -265,8 +257,6 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
         position: droppedStrState.stringBuildDroppedIndex,
       }))
       .sort((current, next) => current.position - next.position);
-    console.log("chapterText:", chapterText);
-    console.log("chapterKeywords:", chapterKeywords);
 
     // MEMO:考慮パターン:
     // Text -> Node
@@ -310,11 +300,19 @@ const WordListSelect: FC<Props> = ({ nestedWordList }) => {
       },
     ]);
   }, [chaptersPayload, editor, droppedStrState]);
-  console.log("chaptersPayload:", chaptersPayload);
   const [isPosting, setIsPosting] = useState(false);
+  // TODO:これはさすがに追いづらいかも
   const handleClickNextChapter = async () => {
     if (isPosting) return;
     setIsPosting(true);
+
+    const chapterText = editor.getText({ blockSeparator: "\n" });
+    console.log("chapterText:", chapterText);
+    // console.log("droppedStrState:", droppedStrState);
+    mergeDroppedText(chapterText, droppedStrState);
+    // TODO droppedStrStateのstringBuildDroppedIndexを降順並び替え
+    // 並び替えた後にchapterTextに挿入する
+    // postChapterRequestの引数に渡す
 
     try {
       await postChapterRequest("abcdef123");
