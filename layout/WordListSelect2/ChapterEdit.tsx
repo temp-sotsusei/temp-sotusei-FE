@@ -1,34 +1,16 @@
 "use client";
 
-import { FC } from "react";
-import { EditorContent, NodeType, TextType, Editor } from "@tiptap/react";
+// 変更: 型定義とユーティリティ関数をインポート、useMemoでパフォーマンス最適化
+
+import { FC, useMemo } from "react";
+import { EditorContent, Editor } from "@tiptap/react";
 import { DndContext, DragEndEvent, DragOverlay, UniqueIdentifier, SensorDescriptor } from "@dnd-kit/core";
 import Draggable from "@/components/Draggable";
 import Droppable from "@/components/Droppable";
 import DroppableBox from "@/components/DroppableBox";
-import { MAX_CHAPTER_CHARS } from "@/const";
-
-type ChaptersPayload = {
-  chapterNum: number;
-  chapterText: string;
-  keywords: {
-    keyword: string;
-    position: number;
-  }[];
-};
-
-type DroppedStrState = {
-  id: UniqueIdentifier;
-  droppedString: string;
-  droppedIndex: number;
-};
-
-type CharItem = {
-  char: string;
-  isDroppable: boolean;
-  isEmpty: boolean;
-  isNewLine: boolean;
-};
+import { ChaptersPayload, DroppedStrState } from "./types";
+import { getTiptapHTML } from "./utils/editorUtils";
+import { MAX_CHAPTER_CHARS } from "./constants";
 
 type Props = {
   selectedWordList: string[];
@@ -46,58 +28,6 @@ type Props = {
   handleClickNextChapter: () => Promise<void>;
 };
 
-const getTiptapHTML = (editor: Editor): CharItem[] => {
-  const editorContent = editor.getJSON();
-  const contentsArray = editorContent.content.map((content) => content.content);
-  const result: CharItem[] = [];
-  let currentParagraphIndex = 0;
-
-  contentsArray.forEach((contents, index) => {
-    if (currentParagraphIndex !== index) {
-      currentParagraphIndex = index;
-      result.push({
-        char: "",
-        isDroppable: false,
-        isEmpty: false,
-        isNewLine: true,
-      });
-    }
-    if (!contents) {
-      return result.push({
-        char: "",
-        isDroppable: false,
-        isEmpty: true,
-        isNewLine: false,
-      });
-    }
-    contents.forEach((content) => {
-      if (content.type === "text") {
-        const textObject = content as TextType;
-        textObject.text.split("").forEach((char) => {
-          result.push({
-            char,
-            isDroppable: true,
-            isEmpty: false,
-            isNewLine: false,
-          });
-        });
-      } else if (content.type === "customWord") {
-        const customWordObject = content as NodeType;
-        customWordObject.attrs.text.split(".").forEach((char) => {
-          result.push({
-            char,
-            isDroppable: false,
-            isEmpty: false,
-            isNewLine: false,
-          });
-        });
-      }
-    });
-  });
-
-  return result;
-};
-
 const ChapterEdit: FC<Props> = ({
   selectedWordList,
   chaptersPayload,
@@ -113,6 +43,11 @@ const ChapterEdit: FC<Props> = ({
   activateTextEditor,
   handleClickNextChapter,
 }) => {
+  // 変更: getTiptapHTMLの結果をuseMemoでメモ化してパフォーマンス向上
+  const editorCharItems = useMemo(() => {
+    return getTiptapHTML(editor);
+  }, [editor.state.doc]);
+
   return (
     <DndContext
       sensors={sensors}
@@ -121,6 +56,7 @@ const ChapterEdit: FC<Props> = ({
     >
       <div className="h-screen">
         <div className="h-[calc(66.67%-16px)] mx-4 mb-4 border overflow-y-auto">
+          {/* 過去の章の表示 */}
           {chaptersPayload.map((chapter, index) => (
             <div key={index}>
               <div className="border flex items-center justify-center py-2 m-4">
@@ -139,6 +75,8 @@ const ChapterEdit: FC<Props> = ({
               </div>
             </div>
           ))}
+          
+          {/* 現在編集中の章 */}
           <div>
             <div className="border flex items-center justify-center py-2 m-4">
               第{chaptersPayload.length + 1}章
@@ -170,7 +108,8 @@ const ChapterEdit: FC<Props> = ({
                   }
                   onClick={activateTextEditor}
                 >
-                  {getTiptapHTML(editor).map((char, index) =>
+                  {/* 変更: メモ化されたeditorCharItemsを使用 */}
+                  {editorCharItems.map((char, index) =>
                     char.isNewLine ? (
                       <div key={index} />
                     ) : char.isEmpty ? (
@@ -198,6 +137,8 @@ const ChapterEdit: FC<Props> = ({
             </div>
           </div>
         </div>
+        
+        {/* ドラッグ可能な単語リストと操作ボタン */}
         <div className="h-1/3 border-t flex flex-col items-between">
           <div className="mt-8 mx-4 flex flex-wrap items-start gap-4 h-[calc(66.67%-32px)]">
             {selectedWordList.map((word, index) => (
@@ -245,6 +186,7 @@ const ChapterEdit: FC<Props> = ({
                     ? "文字数が200文字を超えています"
                     : "次の章を作成"}
                 </p>
+                {/* 変更: droppedStrState.lengthは親から渡されたpropsを使用 */}
                 <p className="text-sm">{droppedStrState.length}/4</p>
               </button>
             </div>
