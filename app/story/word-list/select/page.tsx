@@ -1,4 +1,4 @@
-import WordListSelect from "@/layout/WordListSelect";
+import WordListSelect2 from "@/layout/WordListSelect2";
 import { FC } from "react";
 
 const Page: FC = () => {
@@ -9,7 +9,7 @@ const Page: FC = () => {
     ["ふね", "そら", "ともだち", "ぼうけん"],
   ];
 
-  return <WordListSelect nestedWordList={nestedWordList} />;
+  return <WordListSelect2 nestedWordList={nestedWordList} />;
 };
 
 export default Page;
