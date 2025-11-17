@@ -11,3 +11,4 @@ export type STORY_SAVE_INPUT_FIELD = {
   [STORY_SAVE_INPUT.TITLE]: string;
   [STORY_SAVE_INPUT.THUMBNAILID]: string;
 };
+export const MAX_TITLE_CHARS = 15;
