@@ -1,12 +1,11 @@
 import StoryView from "@/layout/StoryView";
-import { title } from "process";
-import { FC } from "react";
 
 type Props = {
-  id: string;
+  params: Promise<{ id: string }>;
 };
 
-const Page: FC<Props> = ({ id }) => {
+export default async function Page({ params }: Props) {
+  const { id } = await params
   const storyData = {
     title: `物語 ${id}`,
     chapters: [
@@ -16,17 +15,17 @@ const Page: FC<Props> = ({ id }) => {
         feedback: "第1章のフィードバックをここに記述します。",
       },
       {
-        story: `これはストーリー ${title} の第2章です。`,
+        story: `これはストーリー ${id} の第2章です。`,
         words: ["単語E", "単語F", "単語G", "単語H"],
         feedback: "第2章のフィードバックをここに記述します。",
       },
       {
-        story: `これはストーリー ${title} の第3章です。\n複数行も保持します。`,
+        story: `これはストーリー ${id} の第3章です。\n複数行も保持します。`,
         words: ["単語I", "単語J", "単語K", "単語L"],
         feedback: "第3章のフィードバックをここに記述します。",
       },
       {
-        story: `これはストーリー ${title} の第4章です。`,
+        story: `これはストーリー ${id} の第4章です。`,
         words: ["単語M", "単語N", "単語O", "単語P"],
         feedback: "第4章のフィードバックをここに記述します。",
       },
@@ -35,5 +34,3 @@ const Page: FC<Props> = ({ id }) => {
 
   return <StoryView story={storyData} />;
 };
-
-export default Page;
