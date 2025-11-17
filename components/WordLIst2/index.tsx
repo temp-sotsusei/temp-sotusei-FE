@@ -6,12 +6,12 @@ type Props = {
 
 const WordList2: FC<Props> = ({ wordList }) => {
   return (
-    <div className="border mx-auto w-70 h-40 p-4 mt-20 bg-white">
-      <p className="font-bold">単語リスト</p>
+    <div className="aspect-[4/2.5] w-full p-2 border-4 border-[#93C400] bg-white rounded-lg">
+      <p className="font-bold">たんご リスト</p>
       <div className="flex flex-wrap mt-2 gap-2">
         {wordList.map((word, index) => (
           <p
-            className="border border-gray-400 rounded-2xl px-4 py-2 truncate"
+            className="border border-gray-400 rounded-md px-2 py-1 truncate"
             key={index}
           >
             {word}
