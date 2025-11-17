@@ -4,7 +4,7 @@ import type { FC } from "react";
 import Image from "next/image";
 import BannerBar from "@/components/BannerBar";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { STORY_SAVE_INPUT, STORY_SAVE_INPUT_FIELD } from "@/constants/form";
+import { STORY_SAVE_INPUT, STORY_SAVE_INPUT_FIELD } from "@/const";
 
 const BACKGROUND_URL = "/images/background.jpg";
 
