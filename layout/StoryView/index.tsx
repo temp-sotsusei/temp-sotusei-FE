@@ -2,7 +2,6 @@
 
 import { APP_TITLE } from "@/const";
 import type { FC } from "react";
-import { APP_TITLE } from "@/const";
 
 type Chapter = {
   story: string;
