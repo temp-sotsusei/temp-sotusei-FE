@@ -16,7 +16,6 @@
     "@tiptap/starter-kit": "^3.7.0",
     "dompurify": "^3.3.0",
     "html-react-parser": "^5.2.7",
-    "lightningcss": "^1.30.2",
     "lucide-react": "^0.544.0",
     "next": "15.5.4",
     "react": "19.1.0",
