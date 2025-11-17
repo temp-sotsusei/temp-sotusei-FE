@@ -4,7 +4,10 @@ import type { FC } from "react";
 import Image from "next/image";
 import BannerBar from "@/components/BannerBar";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { STORY_SAVE_INPUT, STORY_SAVE_INPUT_FIELD } from "@/constants/form";
+import { STORY_SAVE_INPUT, STORY_SAVE_INPUT_FIELD } from "@/const/form";
+import { titleInputValidation } from "@/validation";
+import { ErrorMessage } from "@hookform/error-message";
+import { MAX_TITLE_CHARS } from "@/const";
 
 const BACKGROUND_URL = "/images/background.jpg";
 
@@ -13,7 +16,12 @@ type Props = {
 };
 
 const TitleDecision: FC<Props> = ({ thumbnails }) => {
-  const { register, handleSubmit } = useForm<STORY_SAVE_INPUT_FIELD>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch,
+  } = useForm<STORY_SAVE_INPUT_FIELD>({
     defaultValues: {
       [STORY_SAVE_INPUT.TITLE]: "",
       [STORY_SAVE_INPUT.THUMBNAILID]: "",
@@ -22,7 +30,7 @@ const TitleDecision: FC<Props> = ({ thumbnails }) => {
   const onSubmit: SubmitHandler<STORY_SAVE_INPUT_FIELD> = (inputFields) => {
     console.log(inputFields);
   };
-
+  const inputTitleLength = watch(STORY_SAVE_INPUT.TITLE).length;
   return (
     <form
       className="min-h-screen w-full overflow-x-hidden px-4 md:px-10 py-8 md:py-10 flex flex-col items-center space-y-8 md:space-y-9"
@@ -44,13 +52,26 @@ const TitleDecision: FC<Props> = ({ thumbnails }) => {
         >
           タイトル
         </label>
-        <input
-          // TODO:文字数バリデーション欲しい？
-          {...register(STORY_SAVE_INPUT.TITLE)}
-          type="text"
-          placeholder="タイトルをいれよう"
-          className="w-full p-3 md:p-4 text-base md:text-xl border border-gray-300 rounded-md bg-white/90"
+        <div className="relative">
+          <div className="flex">
+            <input
+              {...register(STORY_SAVE_INPUT.TITLE, titleInputValidation)}
+              type="text"
+              placeholder="タイトルをいれよう"
+              className="w-4/5 p-3 md:p-4 text-base md:text-xl border-gray-300 rounded-l-md border-l border-t border-b bg-white/90"
+            />
+            <div className="w-1/5 rounded-r-md bg-white/90 border-gray-300 border-t border-r border-b p-3 md:p-4 text-base md:text-xl" />
+          </div>
+          <div className="absolute top-1/2 -translate-y-1/2 right-4">
+            {inputTitleLength} / {MAX_TITLE_CHARS}
+          </div>
+        </div>
+        <ErrorMessage
+          errors={errors}
+          name={STORY_SAVE_INPUT.TITLE}
+          render={({ message }) => <p className="text-red-400">{message}</p>}
         />
+        {errors.title ? null : <p className="h-6" />}
       </div>
 
       <div className="w-full md:w-4/5 mx-auto space-y-2 md:space-y-4 border border-gray-300 rounded-md p-3 md:p-5 bg-white/80">
@@ -66,6 +87,7 @@ const TitleDecision: FC<Props> = ({ thumbnails }) => {
               >
                 <input
                   type="radio"
+                  // TODO: 未選択はあり
                   // TODO:UUID流しこんでからvalueを変更する
                   value={index}
                   {...register(STORY_SAVE_INPUT.THUMBNAILID)}

@@ -1,7 +1,7 @@
 "use client";
 
 import type { FC } from "react";
-import { APP_TITLE } from "@/constants";
+import { APP_TITLE } from "@/const";
 
 type Chapter = {
   story: string;
