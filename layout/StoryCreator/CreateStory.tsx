@@ -22,7 +22,7 @@ function DraggableWord({ id, word, isUsed }) {
         px-4 py-2 rounded-lg font-medium transition-all
         ${isUsed 
           ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-50' 
-          : 'bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 cursor-grab'
+          : 'bg-[#93C400] text-white hover:bg-[#93C400] active:bg-[#93C400] cursor-grab'
         }
         ${isDragging ? 'opacity-50' : ''}
       `}
@@ -183,13 +183,13 @@ const CreateStory: FC<Props> = ({ words, usedWords, storyIndex, story, storyText
           </div>
           
           <EditorDropZone editor={editor} hasError={errorText != null && errorText.trim() !== ""} />
-          {storyTextLength}
+          <div className='flex justify-end'>{storyTextLength}/200</div>
         </div>
 
         {/* 単語パレット */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h2 className="text-lg font-semibold text-gray-700 mb-4">
-            単語パレット
+            たんご リスト
           </h2>
           <div className="flex flex-wrap gap-3">
             {words.map((word, index) => (
@@ -206,7 +206,7 @@ const CreateStory: FC<Props> = ({ words, usedWords, storyIndex, story, storyText
         {/* ドラッグオーバーレイ */}
         <DragOverlay>
           {activeWord ? (
-            <div className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium shadow-lg">
+            <div className="px-4 py-2 bg-[#93C400] text-white rounded-lg font-medium shadow-lg">
               {activeWord}
             </div>
           ) : null}
