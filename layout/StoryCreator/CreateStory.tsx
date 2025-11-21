@@ -1,9 +1,11 @@
 'use client'
 
+import Document from '@tiptap/extension-document';
+import Paragraph from '@tiptap/extension-paragraph';
+import Text from '@tiptap/extension-text';
 import CustomWord from '@/components/CustomWord';
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { EditorContent, JSONContent, useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import React, { FC, useEffect, useRef, useState } from 'react'
 
 function DraggableWord({ id, word, isUsed }) {
@@ -71,7 +73,9 @@ const CreateStory: FC<Props> = ({ words, usedWords, storyIndex, story, storyText
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      Document,
+      Paragraph,
+      Text,
       CustomWord,
     ],
     content: story,
